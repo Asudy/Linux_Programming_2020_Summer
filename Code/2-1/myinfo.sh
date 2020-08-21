@@ -1,9 +1,11 @@
 #!/bin/bash
 # File:         myinfo.sh
+# Purpose:      This script counts ordinary files, dir files & executable files and sums 
+#               the size of ordinary files.
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
 
-if [ $# -ne 1 ] # 如果输入参数不为1，则报错
+if [ $# -ne 1 ] # 如果输入参数不为1个，则报错
 then
     echo "Usage: $0 dir_name"
     exit 1
@@ -34,7 +36,7 @@ else    # 进入主程序
     echo                                                    # 输出结果
     echo "---------- Info of dir: $dirName ----------"
     echo "    1) Oridinary file count:      $ordFileCnt"
-    echo "    2) Oridinary file byte count: $ordFileTotByte"
+    echo "    2) Oridinary file size count: ${ordFileTotByte} Byte"
     echo "    3) Directory count:           $dirCnt"
     echo "    4) Executable file count:     $exeFileCnt"
     echo
