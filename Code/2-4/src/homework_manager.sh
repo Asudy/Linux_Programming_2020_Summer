@@ -13,7 +13,7 @@
 #       4. student
 # 由此主模块进入程序主循环并调用相应模块完成对应功能。运行时需将4个文件存储在同一目录下。
 
-declare -x DEBUG=1
+# declare -x DEBUG=1
 
 declare -x workDir=`dirname $0`;
 adminFile="$workDir/admin.sh"
@@ -38,31 +38,29 @@ show_menu() {
 # Purpose:  Check if the given password matches the username, using $userInfoFile.
 # Usage:    check_pwd user password
 # Return:   0-the pwd matches the username, 1-it doesn't match, 2-argument error.
-check_pwd() {
-    if [ $# -ne 2 ] ; then
-        echo "$0: Check password error: missing or too many arguments"
-        return 2
-    fi
+# check_pwd() {
+#     if [ $# -ne 2 ] ; then
+#         echo "$0: Check password error: missing or too many arguments"
+#         return 2
+#     fi
 
-    if [ ! -e $userInfoFile ] ; then
-        echo "admin Administrator 123456" > $userInfoFile
-    fi
-    chmod 700 $userInfoFile
+#     [ ! -e $userInfoFile ] && echo "admin Administrator 123456" > $userInfoFile
+#     chmod 700 $userInfoFile
 
-    n=`sed -ne "/^\<$1\>/{/\<$2\>$/p}" $userInfoFile | wc -l`
-    if [ $n -eq 1 ] ; then
-        return 0
-    else
-        [ "$DEBUG" ] && echo "check_pwd: Lines = $n"
-        return 1
-    fi
-}
+#     n=`sed -ne "/^\<$1\>/{/\<$2\>$/p}" $userInfoFile | wc -l`
+#     if [ $n -eq 1 ] ; then
+#         return 0
+#     else
+#         [ "$DEBUG" ] && echo "check_pwd: Lines = $n"
+#         return 1
+#     fi
+# }
 
 # 主程序（主循环）
-[ "$DEBUG" ] || clear
-show_menu
+[ "$DEBUG" ] || clear ; show_menu
 while true ; do
-    read -p ">> " opCode
+    read -p "选择操作：" opCode
+    [ "$DEBUG" ] || clear ; show_menu
 
     case $opCode in
         0)          # 退出程序
@@ -75,52 +73,51 @@ while true ; do
             echo "请输入管理员账户：admin"
             while true ; do
                 read -p "请输入管理员密码（初始密码123456，进入系统后请尽快修改密码。输入0返回上级）：" password
-                [ $password -eq 0 ] && break
-                check_pwd "admin" "$password"
+                [ "$password" == "0" ] && break
+                . $workDir/password.sh "admin" "$password"
                 if [ $? -eq 0 ] ; then
                     $adminFile "admin"
-                    [ "$DEBUG" ] || clear ; show_menu
                     break
                 else
                     [ "$DEBUG" ] || (clear ; show_menu)
                     echo "密码错误！请重新输入。"
                 fi
             done
+            [ "$DEBUG" ] || clear ; show_menu
             ;;
         2)          # 进入教师菜单
             while true ; do
                 read -p "请输入教师账户（工号；输入0返回上级）：" user
-                [ $user -eq 0 ] && break
+                [ "$user" == "0" ] && break
                 read -p "请输入教师密码（初始密码请询问管理员，进入系统后请尽快修改密码）：" password
-                check_pwd "t$user" "$password"
+                . $workDir/password.sh "t$user" "$password"
                 if [ $? -eq 0 ] ; then
                     $teacherFile "t$user"
-                    [ "$DEBUG" ] || clear ; show_menu
                     break
                 else
                     [ "$DEBUG" ] || (clear ; show_menu)
                     echo "用户名或密码错误！请重新输入。"
                 fi
             done
+            [ "$DEBUG" ] || clear ; show_menu
             ;;
         3)          # 进入学生菜单
             while true ; do
                 read -p "请输入学生账户（学号；输入0返回上级）：" user
-                [ $user -eq 0 ] && break
+                [ "$user" == "0" ] && break
                 read -p "请输入学生密码（初始密码请询问您的教师，进入系统后请尽快修改密码）：" password
-                check_pwd "s$user" "$password"
+                . $workDir/password.sh "s$user" "$password"
                 if [ $? -eq 0 ] ; then
                     $studentFile "s$user"
-                    [ "$DEBUG" ] || clear ; show_menu
                     break
                 else
                     [ "$DEBUG" ] || (clear ; show_menu)
                     echo "用户名或密码错误！请重新输入。"
                 fi
             done
+            [ "$DEBUG" ] || clear ; show_menu
             ;;
         *)          # 其它输入，报错
-            [ "$DEBUG" ] || clear ; show_menu
             echo "选择无效！请重新输入。"
             echo "Selection not accepted! Please re-enter."
             ;;
