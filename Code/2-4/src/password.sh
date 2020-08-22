@@ -11,7 +11,7 @@ if [ $# -ne 2 ] ; then
     return 2
 fi
 
-[ ! -e $userInfoFile ] && echo "admin Administrator 123456" > $userInfoFile
+[ ! -e $userInfoFile ] && echo "admin:Administrator:123456" > $userInfoFile
 chmod 700 $userInfoFile
 
 n=`sed -ne "/^\<$1\>/{/\<$2\>$/p}" $userInfoFile | wc -l`
