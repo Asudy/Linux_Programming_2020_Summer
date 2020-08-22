@@ -2,6 +2,7 @@
 # File:         myinfo.sh
 # Purpose:      This script counts ordinary files, dir files & executable files and sums 
 #               the size of ordinary files.
+# Usage:        myinfo.sh dir_name
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 # File:         palindrome.sh
 # Purpose:      This script checks if the given word is a palindrome.
+# Usage:        palindrome.sh word_to_check
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
 

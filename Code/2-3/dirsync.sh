@@ -1,12 +1,16 @@
 #!/bin/bash
 # File:         dirsync.sh
-# Purpose:      
+# Purpose:      Backup / Sync 2 given directories.
+#               Backup: Keep the source dir unchanged, copy anything new into the target dir.
+#               Sync:   Delete anything that doesn't exist in the source dir and keep both sides' 
+#                       files updated to the newest version.
+# Usage:        dirsync.sh <mode:backup|sync> source_dir target_dir
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
 
 usage() # 提示正确用法
 {
-    echo "Usage: $0 <mode: backup|sync> source_dir target_dir"
+    echo "Usage: $0 <mode:backup|sync> source_dir target_dir"
 }
 
 if [ $# -ne 3 ] ; then  # 如果输入参数不为3个，报错
