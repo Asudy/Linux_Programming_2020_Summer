@@ -18,6 +18,6 @@ n=`sed -ne "/^\<$1\>/{/\<$2\>$/p}" $userInfoFile | wc -l`
 if [ $n -eq 1 ] ; then
     return 0
 else
-    [ "$DEBUG" ] && echo "check_pwd: Lines = $n"
+    [ "$DEBUG" ] && echo "check_pwd: User = $1, Pass = $2, Lines = $n"
     return 1
 fi
