@@ -12,7 +12,7 @@ show_admin_menu() {
     echo "    3) 删除教师账号"
     echo "    4) 显示教师账号"
     echo "    5) 查找教师"
-    echo "课程信息相关操作："
+    echo "课程相关操作："
     echo "    6)  创建课程"
     echo "    7)  修改课程"
     echo "    8)  删除课程"
@@ -189,7 +189,7 @@ search_course() {
 # 修改管理员密码
 change_admin_pwd() {
     read -p "原密码：" oldPass
-    . $workDir/password.sh "admin" "$oldPass"
+    . $checkPwdFile "admin" "$oldPass"
     [ $? -ne 0 ] && echo "原密码错误，修改失败！" && return 1
     read -p "新密码：" newPass
     read -p "确认新密码：" newPass2

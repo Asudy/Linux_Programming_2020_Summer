@@ -13,16 +13,24 @@
 #       4. student
 # 由此主模块进入程序主循环并调用相应模块完成对应功能。运行时需将4个文件存储在同一目录下。
 
-# declare -x DEBUG=1
+declare -x DEBUG=1
 
 declare -x workDir=`dirname $0`;
-adminFile="$workDir/admin.sh"
-teacherFile="$workDir/teacher.sh"
-studentFile="$workDir/student.sh"
-declare -x SLEEPINTERVAL=1
+declare adminFile="$workDir/admin.sh"
+declare teacherFile="$workDir/teacher.sh"
+declare studentFile="$workDir/student.sh"
+declare -x checkPwdFile="$workDir/password.sh"      # 校验密码程序
 declare -x userInfoFile="$workDir/userInfo.dat"     # 存储用户数据（ID、姓名、密码）的文件
 declare -x courseInfoFile="$workDir/courseInfo.dat" # 存储课程数据（ID、课程名、授课教师）的文件
+declare -x SLEEPINTERVAL=1
 
+# 如果文件缺失，报错退出
+if [ ! "$DEBUG" ] ; then
+if [ ! -e $adminFile -o ! -e $teacherFile -o ! -e $studentFile -o ! -e $checkPwdFile ] ; then
+    echo "系统文件缺失！进入系统失败。"
+    exit 1
+fi
+fi
 chmod +x $adminFile $teacherFile $studentFile   # 设置文件可执行权限
 
 show_menu() {
@@ -74,7 +82,7 @@ while true ; do
             while true ; do
                 read -p "请输入管理员密码（初始密码123456，进入系统后请尽快修改密码。输入0返回上级）：" password
                 [ "$password" == "0" ] && break
-                . $workDir/password.sh "admin" "$password"
+                . $checkPwdFile "admin" "$password"
                 if [ $? -eq 0 ] ; then
                     $adminFile "admin"
                     break
@@ -90,7 +98,7 @@ while true ; do
                 read -p "请输入教师账户（工号；输入0返回上级）：" user
                 [ "$user" == "0" ] && break
                 read -p "请输入教师密码（初始密码请询问管理员，进入系统后请尽快修改密码）：" password
-                . $workDir/password.sh "t$user" "$password"
+                . $checkPwdFile "t$user" "$password"
                 if [ $? -eq 0 ] ; then
                     $teacherFile "t$user"
                     break
@@ -106,7 +114,7 @@ while true ; do
                 read -p "请输入学生账户（学号；输入0返回上级）：" user
                 [ "$user" == "0" ] && break
                 read -p "请输入学生密码（初始密码请询问您的教师，进入系统后请尽快修改密码）：" password
-                . $workDir/password.sh "s$user" "$password"
+                . $checkPwdFile "s$user" "$password"
                 if [ $? -eq 0 ] ; then
                     $studentFile "s$user"
                     break
