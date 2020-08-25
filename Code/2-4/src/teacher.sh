@@ -31,25 +31,82 @@ show_teacher_menu() {
     echo "==================================================="
 }
 
-# create_student_account() {
+# 创建学生账号，成功返回0、失败返回1。
+create_student_account() {
+    read -p "请输入学生学号：s" sid     # 为方便区分，学生账号前缀's'
+    grep "^s$sid:" $userInfoFile 1>/dev/null 2>&1
+    if [ $? -eq 0 ] ; then              # 学生学号为主键，重复则报错
+        echo "该学号学生已存在，创建失败！"
+        return 1
+    fi
+    read -p "请输入学生姓名：" sname
+    read -p "请设置学生初始密码：" spass
+    echo "s$sid:${sname}:${spass:=123456}" >> $userInfoFile # 账号、姓名、密码写入文件
+    echo "学生 $sname 账户创建成功，初始密码 $spass"
+    return 0
+}
 
-# }
+# 修改给定学号学生姓名/密码，成功返回0、失败返回1。
+modify_student_account() {
+    read -p "请输入欲修改的学生学号：s" sid
+    sinfo=`grep "^s$sid:" $userInfoFile`  # 试图从文件中找到这个学生的一行
+    if [ -z "$tinfo" ] ; then   # 若$tinfo长度为0，则说明不存在这个学号，报错退出
+        echo "该学号学生不存在，修改失败！"
+        return 1
+    fi
+    
+    oldName=`echo $sinfo | cut -d: -f2`
+    oldPass=`echo $sinfo | cut -d: -f3`
+    read -p "更改学生姓名（留空则保持不变）：$oldName -> " sname
+    read -p "更改学生密码（留空则保持不变）：$oldPass -> " spass
+    if [ "$sname" -o "$spass" ] ; then  # 若有任一更改，更新文件
+        sed -i "/^s$sid:/c\s$sid:${sname:=$oldName}:${spass:=$oldPass}" $userInfoFile
+        echo "学号 $sid 学生账户信息修改成功！当前姓名：$sname；当前密码：$spass"
+    else
+        echo "学号 $sid 学生账户信息未进行任何修改"
+    fi
+    return 0
+}
 
-# modify_student_account() {
+# 删除给定学号的学生，成功返回0、失败返回1。
+delete_student_account() {
+    read -p "请输入欲删除的学生学号：s" sid
+    grep "^s$sid:" $userInfoFile 2>/dev/null 1>&2 # 同上判断学生是否存在
+    if [ $? -ne 0 ] ; then
+        echo "学号 $sid 学生不存在，删除失败！"
+        return 1
+    fi
+    sed -i "/^s$sid:/d" $userInfoFile    # 存在则删除
+    echo "学号 $sid 学生删除成功！"
+    return 0
+}
 
-# }
+# 列出数据库中所有学生
+list_students() {
+    grep "^s" $userInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
+    [ $? -ne 0 ] && echo "当前没有任何注册的学生" && return 1
+    (echo "学号:姓名:密码" ; grep "^s" $userInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+    return 0
+}
 
-# delete_student_account() {
+# 根据给定的学号/姓名搜索学生
+search_student() {
+    read -p "请输入欲查找的学生学号或姓名（留空以查找空姓名的学生）：" sname
+    if [ "$sname" ] ; then
+        grep -ie "^s.*$sname.*:" -ie ":.*$sname.*:" $userInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
+    else
+        grep -qs ":$sname:" $userInfoFile
+    fi
+    [ $? -ne 0 ] && echo "没有任何符合条件的学生" && return 1
+    
+    if [ "$sname" ] ; then
+        (echo "学号:姓名:密码" ; grep -e "^s.*$sname.*:" -ie ":.*$sname.*:" $userInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+    else
+        (echo "学号:姓名:密码" ; grep ":$sname:" $userInfoFile) | column -ts:
+    fi
 
-# }
-
-# list_students() {
-
-# }
-
-# search_student() {
-
-# }
+    return 0
+}
 
 # create_course_info() {
 
