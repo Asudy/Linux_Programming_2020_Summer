@@ -67,7 +67,7 @@ delete_teacher_account() {
     read -p "请输入欲删除的教师工号：t" tid
     grep "^t$tid:" $userInfoFile 2>/dev/null 1>&2 # 同上判断教师是否存在
     if [ $? -ne 0 ] ; then
-        echo "该工号教师不存在，删除失败！"
+        echo "工号 $tid 教师不存在，删除失败！"
         return 1
     fi
     sed -i "/^t$tid:/d" $userInfoFile    # 存在则删除
@@ -87,7 +87,7 @@ list_teachers() {
 search_teacher() {
     read -p "请输入欲查找的教师工号或姓名（留空以查找空姓名的教师）：" tname
     if [ "$tname" ] ; then
-        grep -e "^t.*$tname.*:" -ie ":.*$tname.*:" $userInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
+        grep -ie "^t.*$tname.*:" -ie ":.*$tname.*:" $userInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
     else
         grep -qs ":$tname:" $userInfoFile
     fi
