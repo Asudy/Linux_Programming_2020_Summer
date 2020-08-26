@@ -169,19 +169,10 @@ list_courses() {
 # 根据给定的课程号/课程名搜索课程
 search_course() {
     [ ! -e $courseInfoFile ] && echo "还未创建任何课程，请先创建课程！" && return 1    # 检查文件是否存在
-    read -p "请输入欲查找的课程课程号或课程名（留空以查找空课程名的课程）：" cname
-    if [ "$cname" ] ; then
-        grep -e "^c.*$cname.*:" -ie ":.*$cname.*:" $courseInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
-    else
-        grep -qs ":$cname:" $courseInfoFile
-    fi
+    read -p "请输入课程查找关键字：" cname
+    grep -qs "^c.*$cname" $courseInfoFile
     [ $? -ne 0 ] && echo "没有任何符合条件的课程" && return 1
-    
-    if [ "$cname" ] ; then
-        (echo "课程号:课程名:任课教师" ; grep -e "^c.*$cname.*:" -ie ":.*$cname.*:" $courseInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
-    else
-        (echo "课程号:课程名:任课教师" ; grep ":$cname:" $courseInfoFile) | column -ts:
-    fi
+    (echo "编号:课程信息内容:所属课程号" ; grep "^c.*$cname" $courseInfoFile) | column -ts:
 
     return 0
 }
