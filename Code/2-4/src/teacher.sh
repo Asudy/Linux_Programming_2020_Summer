@@ -24,8 +24,11 @@ show_teacher_menu() {
     echo "    13) 删除作业"
     echo "    14) 显示作业列表"
     echo "    15) 查询作业"
+    echo "学生-课程相关操作："
+    echo "    16) 变更参与课程学生"
+    echo "    17) 查询学生作业完成情况"
     echo "账号管理："
-    echo "    16) 修改密码"
+    echo "    18) 修改密码"
     echo
     echo "    0) 返回上级菜单"
     echo "==================================================="
@@ -213,6 +216,10 @@ create_assignment() {
     fi
     read -p "请输入课程作业内容：" aContent
     echo "a$aid:${aContent}:c${cid}" >> $courseInfoFile # 作业编号、作业内容、课程号写入文件
+    if [ -e $studentCourseFile ] ; then
+        # 新发布作业时，为班上所有学生添加该作业。
+        grep "^s.*:c$cid::enrolled$" $studentCourseFile | cut -d: -f1 | xargs -I {} echo "{}:c$cid:a$aid:" >> $studentCourseFile
+    fi
     echo "课程作业 [a$aid]$aContent 添加成功，所属课程 c$cid"
     return 0
 }
@@ -235,6 +242,10 @@ modify_assignment() {
     echo "更改课程作业内容（留空则保持不变）：$oldContent ->"
     read aContent
     if [ "$aContent" -o "$cid" ] ; then  # 若有任一更改，更新文件
+        if [ "$cid" -a -e $studentCourseFile ] ; then   # 如果课程号发生修改，删除原课程号学生的作业，新增新课程号学生的作业
+            sed -i "/^s.*:c$oldCID:a$aid:/d" $studentCourseFile
+            grep "^s.*:c$cid::enrolled$" $studentCourseFile | cut -d: -f1 | xargs -I {} echo "{}:c$cid:a$aid:" >> $studentCourseFile
+        fi
         sed -i "/^a$aid:/c\a$aid:${aContent:=$oldContent}:c${cid:=$oldCID}" $courseInfoFile
         echo "编号 a$aid 课程作业作业修改成功！当前课程作业内容：$aContent；当前所属课程：c$cid"
     else
@@ -252,8 +263,13 @@ delete_assignment() {
     cid=`grep "^a$aid:" $courseInfoFile | cut -d: -f3`  # cid="c####"
     tid=`grep "^$cid:" $courseInfoFile | cut -d: -f3`  # tid="t####"
     [ "$tid" != "$1" ] && echo "您不是该课程的任课老师，删除失败！" && return 1
+
     sed -i "/^a$aid:/d" $courseInfoFile
+    if [ -e $studentCourseFile ] ; then
+        sed -i "/^s.*:c.*:a$aid:/d" $studentCourseFile  # 删除作业时，为班上所有同学删除该作业。
+    fi
     echo "编号 a$aid 课程作业删除成功！"
+
     return 0
 }
 
@@ -278,9 +294,64 @@ search_assignment() {
     return 0
 }
 
+# 变更（添加/移除）参与课程学生
+bind_student_course() {
+    [ ! -e $studentCourseFile ] && touch $studentCourseFile   # 若不存在学生-课程文件，创建之。
+    read -p "请输入要添加/移除学生的课程号：c" cid
+    grep -qs "^c$cid:" $courseInfoFile
+    [ $? -ne 0 ] && echo "该课程号不存在，操作失败！" && return 1   # 检查课程号是否存在
+    cname=`grep "^c$cid:.*:$1$" $courseInfoFile | cut -d: -f2`
+    [ -z "$cname" ] && echo "您不是该课程的任课老师，操作失败！" && return 1    # 检查是否是任课教师
+
+    echo "课程 [c$cid]$cname 选择操作："
+    echo "  1) 添加学生"
+    echo "  2) 移除学生"
+    read -p "选择：" op
+    [ "$op" -ne 1 -a "$op" -ne 2 ] && echo "选择无效，操作失败！" && return 1
+
+    while true ; do
+        read -p "请输入需要操作的学生学号（输入exit返回主菜单）：s" sid
+        [ "$sid" = "exit" ] && break
+        grep -qs "^s$sid:" $userInfoFile
+        [ $? -ne 0 ] && echo "学号 $sid 学生不存在，操作失败！" && return 1
+
+        if [ "$op" -eq 1 ] ; then       # 添加
+            grep -qs "^s$sid:.*::enrolled$" $studentCourseFile  # 若返回0（操作成功）则该学生已经在课程中
+            [ $? -eq 0 ] && echo "学号 $sid 学生已在课程名单中，添加失败！" && return 1
+            echo "s$sid:c$cid::enrolled" >> $studentCourseFile
+            # 添加一个学生时，如果该课程已经有作业发布，为该学生添加这些作业。
+            grep "^a.*:c$cid$" $courseInfoFile | cut -d: -f1 | xargs -I {} echo "s$sid:c$cid:{}:" >> $studentCourseFile
+            echo "学号 $sid 学生添加成功！"
+        elif [ "$op" -eq 2 ] ; then     # 移除
+            grep -qs "^s$sid:.*::enrolled$" $studentCourseFile  # 若返回非0（操作失败）则该学生不在课程名单中
+            [ $? -ne 0 ] && echo "学号 $sid 学生不在课程名单中，移除失败！" && return 1
+            sed -i "/^s$sid:/d" $studentCourseFile  # 删除学生时一并删除关于其作业的记录
+            echo "学号 $sid 学生移除成功！"
+        fi
+    done
+}
+
+# 查询给定课程号课程学生作业完成情况
+query_assignment_status() {
+    [ ! -e $courseInfoFile ] && echo "课程信息文件不存在，请联系管理员创建课程！" && return 1    # 检查文件是否存在
+    [ ! -e $studentCourseFile ] && echo "系统中没有相关记录" && return 1    # 检查文件是否存在
+    read -p "请输入课程号：c" cid
+    grep -qs "^c$cid:" $courseInfoFile
+    [ $? -ne 0 ] && echo "该课程号不存在，操作失败！" && return 1   # 检查课程号是否存在
+    cname=`grep "^c$cid:.*:$1$" $courseInfoFile | cut -d: -f2`
+    [ -z "$cname" ] && echo "您不是该课程的任课老师，操作失败！" && return 1    # 检查是否是任课教师
+    read -p "欲查询的作业编号（留空以查看该课程所有作业）：a" aid
+    
+    grep -qs "^s.*:c$cid:a.*$aid:"
+    [ $? -ne 0 ] && echo "没有符合条件的作业情况"
+    (echo "学号:课程号:作业编号:作业内容" ; grep "^s.*:c$cid:a.*$aid:") | column -ts
+    return 0
+}
+
+# 修改教师账户密码
 change_teacher_pwd() {
     read -p "原密码：" oldPass
-    . $checkPwdFile "$1" "$oldPass"
+    . $checkPwdFile "$1" "$oldPass" # $1为教师工号，登录后由该脚本调用者传入
     [ $? -ne 0 ] && echo "原密码错误，修改失败！" && return 1
     read -p "新密码：" newPass
     read -p "确认新密码：" newPass2
@@ -290,7 +361,9 @@ change_teacher_pwd() {
     return 0
 }
 
-[ "$DEBUG" ] || clear ; show_teacher_menu
+[ "$DEBUG" ] || clear ; 
+grep "^$1:" $userInfoFile | cut -d: -f2 | xargs -I {} echo "欢迎您！教师 {}"
+show_teacher_menu
 while true ; do
     read -p "选择操作：" opCode
     [ "$DEBUG" ] || clear ; show_teacher_menu
@@ -312,7 +385,9 @@ while true ; do
         13) delete_assignment;;
         14) list_assignments; echo;;
         15) search_assignment; echo;;
-        16) change_teacher_pwd $1;;
+        16) bind_student_course;;
+        17) query_assignment_status;;
+        18) change_teacher_pwd $1;;
         *)          # 其它输入，报错
             echo "选择无效！请重新输入。"
             echo "Selection not accepted! Please re-enter."
