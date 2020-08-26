@@ -12,23 +12,25 @@ show_teacher_menu() {
     echo "    3)  删除学生账户"
     echo "    4)  显示学生账户"
     echo "    5)  查找学生"
+    echo "课程相关操作："
+    echo "    6)  查询课程"
     echo "课程信息相关操作："
-    echo "    6)  创建课程信息"
-    echo "    7)  修改课程信息"
-    echo "    8)  删除课程信息"
-    echo "    9)  显示课程信息列表"
-    echo "    10) 查询课程信息"
+    echo "    7)  创建课程信息"
+    echo "    8)  修改课程信息"
+    echo "    9)  删除课程信息"
+    echo "    10)  显示课程信息列表"
+    echo "    11) 查询课程信息"
     echo "布置作业相关操作："
-    echo "    11) 创建作业"
-    echo "    12) 修改作业"
-    echo "    13) 删除作业"
-    echo "    14) 显示作业列表"
-    echo "    15) 查询作业"
+    echo "    12) 创建作业"
+    echo "    13) 修改作业"
+    echo "    14) 删除作业"
+    echo "    15) 显示作业列表"
+    echo "    16) 查询作业"
     echo "学生-课程相关操作："
-    echo "    16) 变更参与课程学生"
-    echo "    17) 查询学生作业完成情况"
+    echo "    17) 变更参与课程学生"
+    echo "    18) 查询学生作业完成情况"
     echo "账号管理："
-    echo "    18) 修改密码"
+    echo "    19) 修改密码"
     echo
     echo "    0)  返回上级菜单"
     echo "==================================================="
@@ -88,7 +90,7 @@ delete_student_account() {
 list_students() {
     grep "^s" $userInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
     [ $? -ne 0 ] && echo "当前没有任何注册的学生" && return 1
-    (echo "学号:姓名:密码" ; grep "^s" $userInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+    ( echo "学号:姓名:密码" ; grep "^s" $userInfoFile ) | column -ts: # 有记录，加上表头对齐显示输出
     return 0
 }
 
@@ -103,10 +105,21 @@ search_student() {
     [ $? -ne 0 ] && echo "没有任何符合条件的学生" && return 1
     
     if [ "$sname" ] ; then
-        (echo "学号:姓名:密码" ; grep -e "^s.*$sname.*:" -ie ":.*$sname.*:" $userInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+        ( echo "学号:姓名:密码" ; grep -e "^s.*$sname.*:" -ie ":.*$sname.*:" $userInfoFile ) | column -ts: # 有记录，加上表头对齐显示输出
     else
-        (echo "学号:姓名:密码" ; grep ":$sname:" $userInfoFile) | column -ts:
+        ( echo "学号:姓名:密码" ; grep ":$sname:" $userInfoFile ) | column -ts:
     fi
+
+    return 0
+}
+
+# 根据给定的课程号/课程名搜索课程
+search_course() {
+    [ ! -e $courseInfoFile ] && echo "还未创建任何课程，请联系管理员创建课程！" && return 1    # 检查文件是否存在
+    read -p "请输入课程查找关键字：" cname
+    grep -qs "^c.*$cname" $courseInfoFile
+    [ $? -ne 0 ] && echo "没有任何符合条件的课程" && return 1
+    (echo "课程号:课程名称:任课教师工号" ; grep "^c.*$cname" $courseInfoFile) | column -ts:
 
     return 0
 }
@@ -180,7 +193,7 @@ list_course_info() {
     [ ! -e $courseInfoFile ] && echo "课程信息文件不存在，请联系管理员创建课程！" && return 1    # 检查文件是否存在
     grep -qs "^m" $courseInfoFile # 判断是否有记录，无记录则报错退出
     [ $? -ne 0 ] && echo "当前没有任何课程信息" && return 1
-    (echo "编号:课程信息内容:所属课程号" ; grep "^m" $courseInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+    ( echo "编号:课程信息内容:所属课程号" ; grep "^m" $courseInfoFile ) | column -ts: # 有记录，加上表头对齐显示输出
     return 0
 }
 
@@ -191,7 +204,7 @@ search_course_info() {
     grep -qs "^m.*$mContent" $courseInfoFile
     [ $? -ne 0 ] && echo "没有任何符合条件的课程信息" && return 1
     
-    (echo "编号:课程信息内容:所属课程号" ; grep "^m.*$mContent" $courseInfoFile) | column -ts:
+    ( echo "编号:课程信息内容:所属课程号" ; grep "^m.*$mContent" $courseInfoFile ) | column -ts:
 
     return 0
 }
@@ -278,7 +291,7 @@ list_assignments() {
     [ ! -e $courseInfoFile ] && echo "课程作业文件不存在，请联系管理员创建课程！" && return 1    # 检查文件是否存在
     grep -qs "^a" $courseInfoFile # 判断是否有记录，无记录则报错退出
     [ $? -ne 0 ] && echo "当前没有任何课程作业" && return 1
-    (echo "编号:作业内容:所属课程号" ; grep "^a" $courseInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+    ( echo "编号:作业内容:所属课程号" ; grep "^a" $courseInfoFile ) | column -ts: # 有记录，加上表头对齐显示输出
     return 0
 }
 
@@ -289,7 +302,7 @@ search_assignment() {
     grep -qs "^a.*$aContent" $courseInfoFile
     [ $? -ne 0 ] && echo "没有任何符合条件的课程作业" && return 1
     
-    (echo "编号:作业内容:所属课程号" ; grep "^a.*$aContent" $courseInfoFile) | column -ts:
+    ( echo "编号:作业内容:所属课程号" ; grep "^a.*$aContent" $courseInfoFile ) | column -ts:
 
     return 0
 }
@@ -313,18 +326,18 @@ bind_student_course() {
         read -p "请输入需要操作的学生学号（输入exit返回主菜单）：s" sid
         [ "$sid" = "exit" ] && break
         grep -qs "^s$sid:" $userInfoFile
-        [ $? -ne 0 ] && echo "学号 $sid 学生不存在，操作失败！" && return 1
+        [ $? -ne 0 ] && echo "学号 $sid 学生不存在，操作失败！" && continue
 
         if [ "$op" -eq 1 ] ; then       # 添加
             grep -qs "^s$sid:.*::enrolled$" $studentCourseFile  # 若返回0（操作成功）则该学生已经在课程中
-            [ $? -eq 0 ] && echo "学号 $sid 学生已在课程名单中，添加失败！" && return 1
+            [ $? -eq 0 ] && echo "学号 $sid 学生已在课程名单中，添加失败！" && continue
             echo "s$sid:c$cid::enrolled" >> $studentCourseFile
             # 添加一个学生时，如果该课程已经有作业发布，为该学生添加这些作业。
             grep "^a.*:c$cid$" $courseInfoFile | cut -d: -f1 | xargs -I {} echo "s$sid:c$cid:{}:" >> $studentCourseFile
             echo "学号 $sid 学生添加成功！"
         elif [ "$op" -eq 2 ] ; then     # 移除
             grep -qs "^s$sid:.*::enrolled$" $studentCourseFile  # 若返回非0（操作失败）则该学生不在课程名单中
-            [ $? -ne 0 ] && echo "学号 $sid 学生不在课程名单中，移除失败！" && return 1
+            [ $? -ne 0 ] && echo "学号 $sid 学生不在课程名单中，移除失败！" && continue
             sed -i "/^s$sid:/d" $studentCourseFile  # 删除学生时一并删除关于其作业的记录
             echo "学号 $sid 学生移除成功！"
         fi
@@ -342,9 +355,9 @@ query_assignment_status() {
     [ -z "$cname" ] && echo "您不是该课程的任课老师，操作失败！" && return 1    # 检查是否是任课教师
     read -p "欲查询的作业编号（留空以查看该课程所有作业）：a" aid
     
-    grep -qs "^s.*:c$cid:a.*$aid:"
+    grep -qs "^s.*:c$cid:a.*$aid:" $studentCourseFile
     [ $? -ne 0 ] && echo "没有符合条件的作业情况"
-    (echo "学号:课程号:作业编号:作业内容" ; grep "^s.*:c$cid:a.*$aid:") | column -ts
+    ( echo "学号:课程号:作业编号:作业内容" ; grep "^s.*:c$cid:a.*$aid:" $studentCourseFile ) | column -ts:
     return 0
 }
 
@@ -375,19 +388,20 @@ while true ; do
         3) delete_student_account;;
         4) list_students; echo;;
         5) search_student; echo;;
-        6) create_course_info;;
-        7) modify_course_info;;
-        8) delete_course_info;;
-        9) list_course_info; echo;;
-        10) search_course_info; echo;;
-        11) create_assignment;;
-        12) modify_assignment;;
-        13) delete_assignment;;
-        14) list_assignments; echo;;
-        15) search_assignment; echo;;
-        16) bind_student_course;;
-        17) query_assignment_status;;
-        18) change_teacher_pwd $1;;
+        6) search_course;;
+        7) create_course_info $1;;
+        8) modify_course_info $1;;
+        9) delete_course_info $1;;
+        10) list_course_info; echo;;
+        11) search_course_info; echo;;
+        12) create_assignment $1;;
+        13) modify_assignment $1;;
+        14) delete_assignment $1;;
+        15) list_assignments; echo;;
+        16) search_assignment; echo;;
+        17) bind_student_course $1;;
+        18) query_assignment_status $1;;
+        19) change_teacher_pwd $1;;
         *)          # 其它输入，报错
             echo "选择无效！请重新输入。"
             echo "Selection not accepted! Please re-enter."
