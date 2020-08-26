@@ -18,7 +18,7 @@ show_teacher_menu() {
     echo "    7)  创建课程信息"
     echo "    8)  修改课程信息"
     echo "    9)  删除课程信息"
-    echo "    10)  显示课程信息列表"
+    echo "    10) 显示课程信息列表"
     echo "    11) 查询课程信息"
     echo "布置作业相关操作："
     echo "    12) 创建作业"
@@ -329,16 +329,16 @@ bind_student_course() {
         [ $? -ne 0 ] && echo "学号 $sid 学生不存在，操作失败！" && continue
 
         if [ "$op" -eq 1 ] ; then       # 添加
-            grep -qs "^s$sid:.*::enrolled$" $studentCourseFile  # 若返回0（操作成功）则该学生已经在课程中
+            grep -qs "^s$sid:c$cid::enrolled$" $studentCourseFile  # 若返回0（操作成功）则该学生已经在课程中
             [ $? -eq 0 ] && echo "学号 $sid 学生已在课程名单中，添加失败！" && continue
             echo "s$sid:c$cid::enrolled" >> $studentCourseFile
             # 添加一个学生时，如果该课程已经有作业发布，为该学生添加这些作业。
             grep "^a.*:c$cid$" $courseInfoFile | cut -d: -f1 | xargs -I {} echo "s$sid:c$cid:{}:" >> $studentCourseFile
             echo "学号 $sid 学生添加成功！"
         elif [ "$op" -eq 2 ] ; then     # 移除
-            grep -qs "^s$sid:.*::enrolled$" $studentCourseFile  # 若返回非0（操作失败）则该学生不在课程名单中
+            grep -qs "^s$sid:c$cid::enrolled$" $studentCourseFile  # 若返回非0（操作失败）则该学生不在课程名单中
             [ $? -ne 0 ] && echo "学号 $sid 学生不在课程名单中，移除失败！" && continue
-            sed -i "/^s$sid:/d" $studentCourseFile  # 删除学生时一并删除关于其作业的记录
+            sed -i "/^s$sid:c$cid:/d" $studentCourseFile  # 删除学生时一并删除关于其作业的记录
             echo "学号 $sid 学生移除成功！"
         fi
     done
@@ -356,7 +356,7 @@ query_assignment_status() {
     read -p "欲查询的作业编号（留空以查看该课程所有作业）：a" aid
     
     grep -qs "^s.*:c$cid:a.*$aid:" $studentCourseFile
-    [ $? -ne 0 ] && echo "没有符合条件的作业情况"
+    [ $? -ne 0 ] && echo "没有符合条件的作业情况" && return 0
     ( echo "学号:课程号:作业编号:作业内容" ; grep "^s.*:c$cid:a.*$aid:" $studentCourseFile ) | column -ts:
     return 0
 }

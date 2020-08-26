@@ -84,29 +84,38 @@ edit_assignment() {
 
     echo "您当前的作业有：" && list_assignments $1
     read -p "请选择您要编辑的作业编号：a" aid
+    grep -qs "^$1:.*:a$aid:" $studentCourseFile
+    [ $? -ne 0 ] && echo "您没有被布置作业编号 a$aid 作业，操作失败" && return 1
+    
     oldContent=`grep "^$1:.*:a$aid:" $studentCourseFile | cut -d: -f4`
     echo -e "旧内容：\n$oldContent"
     echo "请输入新内容（留空保持不变）："
     read newContent
-    while true ; do
-        read -p "确认提交？(Y/n): " op
-        case ${op:-Y} in
-            y|yes|Y|Yes|YES)
-                sed -i "/^$1:.*:a$aid:/s/:.*$/:$newContent/"
-                if [ $? -eq 0 ] ; then
-                    echo "作业 a$aid 内容成功修改！"
-                    return 0
-                else
-                    [ "$DEBUG" ] && echo "sed替换错误"
-                    return 1
-                fi
-            n|no|N|No|NO)
-                echo "作业 a$aid 内容修改已撤销"
-                return 0
-            *)
-                echo "输入不合法，请重新选择"
-        esac
-    done
+
+    if [ "$newContent" ] ; then while true ; do
+            read -p "确认提交？(Y/n): " op
+            case ${op:-Y} in
+                y|yes|Y|Yes|YES)
+                    sed -i "/^$1:.*:a$aid:/s/:$oldContent$/:$newContent/" $studentCourseFile
+                    if [ $? -eq 0 ] ; then
+                        echo "作业 a$aid 内容成功修改！"
+                        return 0
+                    else
+                        [ "$DEBUG" ] && echo "sed替换错误"
+                        return 1
+                    fi ;;
+                n|no|N|No|NO)
+                    echo "作业 a$aid 内容修改已撤销"
+                    return 0 ;;
+                *)
+                    echo "输入不合法，请重新选择";;
+            esac
+        done
+    else
+        echo "作业 a$aid 内容修改已撤销"
+    fi
+
+    return 0
 }
 
 # 修改学生账户姓名
