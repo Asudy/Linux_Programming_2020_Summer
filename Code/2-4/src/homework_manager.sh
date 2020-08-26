@@ -32,7 +32,7 @@ if [ ! -e $adminFile -o ! -e $teacherFile -o ! -e $studentFile -o ! -e $checkPwd
     exit 1
 fi
 fi
-chmod +x $adminFile $teacherFile $studentFile   # 设置文件可执行权限
+chmod +x $adminFile $teacherFile $studentFile $checkPwdFile # 设置文件可执行权限
 
 show_menu() {
     echo "==================== 作业管理系统 ===================="

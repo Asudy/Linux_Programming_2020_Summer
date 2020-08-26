@@ -172,7 +172,7 @@ search_course() {
     read -p "请输入课程查找关键字：" cname
     grep -qs "^c.*$cname" $courseInfoFile
     [ $? -ne 0 ] && echo "没有任何符合条件的课程" && return 1
-    (echo "编号:课程信息内容:所属课程号" ; grep "^c.*$cname" $courseInfoFile) | column -ts:
+    (echo "课程号:课程名称:任课教师工号" ; grep "^c.*$cname" $courseInfoFile) | column -ts:
 
     return 0
 }
