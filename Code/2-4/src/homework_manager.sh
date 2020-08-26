@@ -21,7 +21,8 @@ declare teacherFile="$workDir/teacher.sh"
 declare studentFile="$workDir/student.sh"
 declare -x checkPwdFile="$workDir/password.sh"      # 校验密码程序
 declare -x userInfoFile="$workDir/userInfo.dat"     # 存储用户数据（ID、姓名、密码）的文件
-declare -x courseInfoFile="$workDir/courseInfo.dat" # 存储课程数据（ID、课程名、授课教师）的文件
+declare -x courseInfoFile="$workDir/courseInfo.dat" # 存储课程数据、课程信息、课程作业的文件
+declare -x studentCourseFile="$workDir/studentCourse.dat" # 存储学生-课程相关数据的文件
 declare -x SLEEPINTERVAL=1
 
 # 如果文件缺失，报错退出
@@ -43,28 +44,8 @@ show_menu() {
     echo "======================================================"
 }
 
-# Purpose:  Check if the given password matches the username, using $userInfoFile.
-# Usage:    check_pwd user password
-# Return:   0-the pwd matches the username, 1-it doesn't match, 2-argument error.
-# check_pwd() {
-#     if [ $# -ne 2 ] ; then
-#         echo "$0: Check password error: missing or too many arguments"
-#         return 2
-#     fi
-
-#     [ ! -e $userInfoFile ] && echo "admin Administrator 123456" > $userInfoFile
-#     chmod 700 $userInfoFile
-
-#     n=`sed -ne "/^\<$1\>/{/\<$2\>$/p}" $userInfoFile | wc -l`
-#     if [ $n -eq 1 ] ; then
-#         return 0
-#     else
-#         [ "$DEBUG" ] && echo "check_pwd: Lines = $n"
-#         return 1
-#     fi
-# }
-
 # 主程序（主循环）
+[ "$DEBUG" ] && echo "[DEBUG] Debug mode is currently ON."
 [ "$DEBUG" ] || clear ; show_menu
 while true ; do
     read -p "选择操作：" opCode
@@ -95,7 +76,7 @@ while true ; do
             ;;
         2)          # 进入教师菜单
             while true ; do
-                read -p "请输入教师账户（工号；输入0返回上级）：" user
+                read -p "请输入教师账户（工号；输入0返回上级）：t" user
                 [ "$user" == "0" ] && break
                 read -p "请输入教师密码（初始密码请询问管理员，进入系统后请尽快修改密码）：" password
                 . $checkPwdFile "t$user" "$password"
@@ -111,7 +92,7 @@ while true ; do
             ;;
         3)          # 进入学生菜单
             while true ; do
-                read -p "请输入学生账户（学号；输入0返回上级）：" user
+                read -p "请输入学生账户（学号；输入0返回上级）：s" user
                 [ "$user" == "0" ] && break
                 read -p "请输入学生密码（初始密码请询问您的教师，进入系统后请尽快修改密码）：" password
                 . $checkPwdFile "s$user" "$password"
