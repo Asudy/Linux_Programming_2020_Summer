@@ -20,4 +20,4 @@ str=${1//[!a-zA-Z]}         # 仅保留字母字符
 revstr=`echo $str | rev`    # 生成字符串的倒序字符串
 
 # 如果原字符串=倒序字符串，输出“是”，否则输出“否”
-[ $str = $revstr ] && echo "Word \"$str\" is a palindrome." || echo "Word \"$str\" is not a palindrome."
+[ "$str" = "$revstr" ] && echo "Word \"$str\" is a palindrome." || echo "Word \"$str\" is not a palindrome."
