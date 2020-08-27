@@ -1,0 +1,436 @@
+#!/bin/bash
+#以下是管理员模块（admin_module）
+admin_pwd=123456 #管理员初始密码
+touch adminpwd_record #建立文件保存密码信息
+echo $admin_pwd >> adminpwd_record #将初始密码写进文件
+chmod 700 adminpwd_record #对文件进行权限控制
+
+admin_menu(){ #管理员菜单
+	clear
+	while true
+	do
+		echo "================================================="
+		echo "欢迎进入管理员菜单，请选择："
+		echo "1-创建教师账号"
+		echo "2-修改教师账号"
+		echo "3-删除教师账号"
+		echo "4-显示教师账号"
+		echo "5-创建课程"
+		echo "6-修改课程"
+		echo "7-删除课程"
+		echo "8-显示课程列表"
+		echo "9-修改密码"
+		echo "0-返回上级菜单"
+		echo "================================================="
+		read admin_choice #读入用户输入
+		case $admin_choice in #以下函数名与上面的功能一一对应
+		1)create_tid;;
+		2)alter_tid;;
+		3)delete_tid;;
+		4)show_tid;;
+		5)create_course;;
+		6)alter_course;;
+		7)delete_course;;
+		8)show_course;;
+		9)change_adminpwd;;
+		0)back;;
+		*)
+			echo "无效的输入，请检查您的输入！"
+			sleep 2
+			clear;;
+		esac
+	done
+}
+
+create_tid(){ #创建教师账号，包括教师的工号、姓名和登录密码
+	clear
+	touch ./teacher_record #建立文件teacher_record保存教师信息
+	echo "-------------------------------------------------"
+	echo "您可以使用本功能创建教师账号，请注意："
+	echo "1)工号命名规范为t+数字，总长6位，如t12345"
+	echo "2)为了教师用户初次登陆方便，建议将初始密码设为123456"
+	echo "-------------------------------------------------"
+	echo -n "请输入您需要创建的教师用户个数："
+	read tnum
+	for((i=1;i<=tnum;i++))
+	do
+		echo -n "请输入工号："
+		read tid
+		if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+		then
+			echo "工号长度不符合要求,本次输入无效！"
+			continue
+		fi	
+		grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+		if [ $? -eq 0 ] #如果命令退出状态是0，表示没有异常，说明这个用户已存在
+		then
+			echo "该用户已存在！请重新输入"
+			continue #跳过这次输入
+		fi
+		echo -n "请输入姓名："
+		read tname
+		echo -n "设置初始密码："
+		read tpwd
+		echo $tid $tname $tpwd >> teacher_record #将教师信息写进文件
+		echo "创建成功！"
+	done
+}
+
+alter_tid(){ #修改教师账号
+	clear
+	echo -n "请输入您需要修改的教师工号："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		return
+	fi	
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在teacher_record中查找教师工号
+	if [ $? -ne 0 ] #如果没有找到
+	then
+		echo "没有找到这个工号，请检查您的输入！"
+	else #如果找到了，先删除原来的信息，再录入新信息
+		echo -n "请输入新的工号："
+		read new_tid
+		if [ ${new_tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [[ ${new_tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [ ${#new_tid} -ne 6 ] #检查工号长度满足要求
+		then
+			echo "工号长度不符合要求,本次输入无效！"
+			return
+		fi	
+		grep -w "$new_tid" ./teacher_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出	
+		if [ $? -eq 0 -a $new_tid != $tid ] #检查用户是否存在，新账号账号可以与当前账号相同
+		then
+			echo "该用户已存在！请重新输入"
+			return
+		fi
+		echo -n "请输入新的姓名："
+		read new_tname
+		echo -n "请设置新密码："
+		read new_tpwd
+		grep -wv "$tid" ./teacher_record > teacher_record_tmp #全字查找并反转输出到新文件
+		rm ./teacher_record #删除原来的记录
+		mv teacher_record_tmp teacher_record #更改新文件的名字
+		echo $new_tid $new_tname $new_tpwd >> teacher_record #将新信息写进文件		
+	fi
+}
+
+delete_tid(){ #删除教师账号
+	clear
+	echo -n "请输入需要删除的教师工号："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		return
+	fi
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到则给出警告
+	then
+		echo "该教师工号不存在，请检查您的输入！"
+	else #如果找到
+		grep -wv "$tid" ./teacher_record > teacher_record_tmp #全字查找并反转输出到新文件
+		grep -w "$tid" ./teacher_record > dustbin #为了安全，将删除的记录放到dustbin文件
+		rm ./teacher_record #删除原来的记录
+		mv teacher_record_tmp teacher_record #改回原名字
+		echo "删除成功，您可以在dustbin文件中找到被删的记录"
+		sleep 2
+		return
+	fi	
+}
+
+show_tid(){ #显示已经创建的教师信息
+	clear
+	ls ./teacher_record 2>/dev/null 1>&2 #首先检查这个文件存不存在
+	if [ $? -ne 0 ] #如果不存在则退出
+	then
+		echo "尚未有相关记录！"
+		return
+	fi
+	echo "您已经创建的教师信息是："
+	echo "工号 姓名 初始密码"
+	cat ./teacher_record
+}
+
+create_course(){ #创建课程，包括课程号、课程名称以及负责老师的工号
+	clear
+	echo "-------------------------------------------------"
+	echo "您可以使用本功能创建课程，请注意："
+	echo "1)课程号命名规范为c+数字，总长8位，如c1234567"
+	echo "2)工号命名规范为t+数字，总长6位，如t12345"
+	echo "-------------------------------------------------"
+	touch ./course_record #创建文件course_record记录课程信息
+	echo -n "请输入您需要创建的课程数："
+	read cnum
+	for((i=1;i<=cnum;i++))
+	do
+		echo -n "请输入课程号："
+		read cid
+		if [ ${cid:0:1} != c ] #检查课程号是否符合命名规范，为了统一起见，这里规定课程号以c开头
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [[ ${cid:1} == *[!0-9]* ]] #从课程号第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [ ${#cid} -ne 8 ] #检查长度是否满足要求
+		then
+			echo "课程号长度不符合要求,本次输入无效！"
+			continue
+		fi	
+		grep -w "$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+		if [ $? -eq 0 ] #检查课程是否存在
+		then
+			echo "课程已被创建，请重新输入！"
+			continue #跳过这次输入
+		fi
+		echo -n "请输入课程名称："
+		read cname
+		grep -w "$cname" ./course_record 1>/dev/null 2>&1 #课程名称也应该保持唯一性，所以需要检查
+		if [ $? -eq 0 ]
+		then
+			echo "课程名称已存在，请检查您的输入！"
+			continue
+		fi
+		echo -n "输入授课教师工号："
+		read tid
+		if [ ${tid:0:1} != t ] #检查工号是否符合命名规范
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+		then
+			echo "工号长度不符合要求,本次输入无效！"
+			continue
+		fi	
+		grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #检查教师工号存不存在
+		if [ $? -ne 0 ] #如果教师工号不存在，说明分配有错误
+		then
+			echo "输入无效，这个教师工号尚未被创建！"
+			continue #跳过这次输入
+		fi		
+		echo $cid $cname $tid >> course_record #将课程信息写进文件，写在一行方便以后查找
+		echo "创建成功！"
+	done
+}
+
+alter_course(){ #修改已经创建的课程信息
+	clear
+	echo "-------------------------------------------------"
+	echo "您可以使用本功能修改课程，请注意："
+	echo "考虑到实际情况，不同学院/老师可能会开设同名的课程"
+	echo "所以我们允许您创建名称相同的课程，但是两门课的课程号不能相同"
+	echo "-------------------------------------------------"
+	echo -n "请输入您需要修改的课程号："
+	read cid
+	if [ ${cid:0:1} != c ] #检查课程号是否符合命名规范
+	then
+		echo "没有找到该课程号，请检查您的输入！"
+		return
+	fi
+	if [[ ${cid:1} == *[!0-9]* ]] #从第二位开始检查后面是不是数字
+	then
+		echo "没有找到该课程号，请检查您的输入！！"
+		return
+	fi
+	if [ ${#cid} -ne 8 ] #检查长度满是否足要求
+	then
+		echo "没有找到该课程号，请检查您的输入！"
+		return
+	fi	
+	grep -w "$cid" ./course_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到，给出警告
+	then
+		echo "没有找到该课程号，请检查您的输入！"
+	else #如果找到了，先删除原来的信息，再输录入新信息
+		echo -n "请输入新的课程号："
+		read new_cid
+		if [ ${new_cid:0:1} != c ] #检查课程号是否符合命名规范
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [[ ${new_cid:1} == *[!0-9]* ]] #从第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [ ${#new_cid} -ne 8 ] #检查长度满是否足要求
+		then
+			echo "工号长度不符合要求,本次输入无效！"
+			return
+		fi	
+		grep -w "$new_cid" ./course_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出	
+		if [ $? -eq 0 -a $new_cid != $cid ] #如果课程已存在，给出警告并返回
+		then
+			echo "该课程已被创建，请重新输入！"
+			return
+		fi
+		echo -n "请输入新的课程名："
+		read new_cname
+		echo -n "请输入新的负责老师工号："
+		read new_tid
+		if [ ${new_tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [[ ${new_tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [ ${#new_tid} -ne 6 ] #检查工号长度满足要求
+		then
+			echo "工号长度不符合要求,本次输入无效！"
+			return
+		fi
+		grep -w "$new_tid" ./teacher_record 1>/dev/null 2>&1 #检查该老师是否存在
+		if [ $? -ne 0 ] #如果不存在，给出警告并返回
+		then
+			echo "没有这个老师，请检查您的输入！"
+			return
+		fi		
+		grep -wv "$cid" ./course_record > course_record_tmp #全字查找并反转输出到新文件
+		rm ./course_record #删除原来的记录
+		mv course_record_tmp course_record #更改新文件的名字	
+		echo $new_cid $new_cname $new_tid >> course_record #将新信息写进文件
+		echo "修改成功！"
+	fi	
+}
+
+delete_course(){ #删除课程信息
+	clear
+	echo -n "请输入需要删除的课程号："
+	read cid
+	if [ ${cid:0:1} != c ] #检查课程号是否符合命名规范
+	then
+		echo "没有找到该课程号，请检查您的输入！"
+		return
+	fi
+	if [[ ${cid:1} == *[!0-9]* ]] #从第二位开始检查后面是不是数字
+	then
+		echo "没有找到该课程号，请检查您的输入！！"
+		return
+	fi
+	if [ ${#cid} -ne 8 ] #检查长度满是否足要求
+	then
+		echo "没有找到该课程号，请检查您的输入！"
+		return
+	fi
+	grep -w "$cid" ./course_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到，给出警告
+	then
+		echo "该课程不存在，请检查您的输入！"
+	else #如果找到
+		grep -wv "$cid" ./course_record > course_record_tmp #全字查找并反转输出到新文件
+		grep -w "$cid" ./course_record > dustbin #为了安全，将删除的记录放到dustbin文件
+		rm ./course_record #删除原来的记录
+		mv course_record_tmp course_record #改回原名字
+		echo "删除成功，您可以在dustbin文件中找到被删的记录"
+		sleep 2
+		return
+	fi		
+}
+
+show_course(){ #显示已经创建的课程信息
+	clear
+	ls ./course_record 2>/dev/null 1>&2 #首先检查这个文件存不存在
+	if [ $? -ne 0 ] #如果不存在则退出
+	then
+		echo "尚未有相关记录！"
+		return
+	fi	
+	echo "您已经创建的课程信息是："
+	echo "课程号 课程名 负责教师工号"
+	cat ./course_record
+}
+
+change_adminpwd(){ #管理员修改密码
+	clear
+	echo "您已进入密码修改界面"
+	echo -n "请输入您的新密码(长度不少于6位)："
+	read new_adminpwd0 #读入新的密码
+	len=`expr length $new_adminpwd0` #求密码长度
+	if [ $len -lt 6 ] #判断密码长度是否少于六位
+	then
+		echo "密码长度不够,请按要求输入！"
+		return
+	fi
+	echo -n "请再次输入以确认："
+	read new_adminpwd1 #再次输入密码
+	if [ $new_adminpwd0 -ne $new_adminpwd1 ] #检查两次输入是否匹配
+	then
+		echo "两次输入不匹配！"
+		return
+	else
+		echo $new_adminpwd0 > ./adminpwd_record #将新的密码写进文件
+		echo "密码修改成功！"
+	fi
+}
+
+back(){ #返回上级菜单
+	clear
+	exit
+}
+
+echo "提示：初始密码是123456，登陆后请及时修改！"
+echo -n "请输入管理员密码："
+read line
+secret=`head -n 1 ./adminpwd_record` #从保存密码的文件中读取
+if [ $line -eq $secret ]
+then
+	admin_menu #如果密码正确，进入管理员菜单
+else
+	clear
+	echo "密码错误！"
+	sleep 2
+fi

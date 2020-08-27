@@ -1,0 +1,779 @@
+#!/bin/bash
+#以下是教师模块（teacher_module）
+t_pwd=123456 #教师初始密码
+touch tpwd_record #建立文件保存密码信息
+echo $t_pwd >> tpwd_record #每次运行初始密码都会被追加到文件，但验证的时候只取第一行
+chmod 700 tpwd_record #对文件进行权限控制
+
+teacher_menu(){ #教师菜单
+	clear
+	while true
+	do
+		echo "================================================="
+		echo "老师您好，请选择以下功能："
+		echo "1-查看您教授的课程"
+		echo "2-添加学生账户"
+		echo "3-修改学生账户"
+		echo "4-删除学生账户"
+		echo "5-查看学生账户信息"
+		echo "6-发布课程信息"
+		echo "7-修改已发布的课程信息"
+		echo "8-删除已发布的课程信息"
+		echo "9-查看已发布的课程信息"
+		echo "10-布置作业"
+		echo "11-修改已布置的作业"
+		echo "12-删除已布置的作业"
+		echo "13-查看已布置的作业"
+		echo "14-查看学生作业完成情况"
+		echo "15-修改密码"
+		echo "0-返回上级菜单"
+		echo "================================================="
+		read teacher_choice #读取用户输入
+		case $teacher_choice in #以下函数名与上面的功能一一对应
+		1)check_course;;
+		2)create_sid;;
+		3)alter_sid;;
+		4)delete_sid;;
+		5)find_sid;;
+		6)add_courseinfo;;
+		7)alter_courseinfo;;
+		8)delete_courseinfo;;
+		9)show_courseinfo;;
+		10)assign_job;;
+		11)alter_job;;
+		12)delete_job;;
+		13)show_job;;
+		14)check_job;;
+		15)change_tpwd;;
+		0)back;;
+		*)
+			echo "无效的输入，请检查您的输入！"
+			sleep 2
+			clear;;
+		esac
+	done
+}
+
+check_course(){ #查看教授的课程
+	clear
+	echo -n "请输入您的工号以便查找："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，给出警告并退出
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi	
+	grep -w "$tid" ./course_record 1>/dev/null 2>&1 #在课程记录中查找工号，判断这个老师是否被分配了任务
+	if [ $? -ne 0 ] #如果没有找到记录，给出警告并退出
+	then
+		echo "您还没有被分配教学任务！"
+		return
+	fi
+	echo "您的教学任务是："
+	echo "课程号 课程名 负责教师工号"
+	grep -w "$tid" ./course_record
+}
+
+create_sid(){ #创建学生账号
+	clear
+	echo "-------------------------------------------------"
+	echo "您可以使用本功能创建学生账号，请注意："
+	echo "1)学号命名规范为s+数字，总长8位，如s1234567"
+	echo "2)为了学生用户初次登陆方便，建议将初始密码设为123456"
+	echo "-------------------------------------------------"
+	touch ./student_record #创建文件student_record记录学生信息
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		continue
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		continue
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		continue
+	fi	
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您需要创建的学生用户个数："
+	read snum
+	for((i=1;i<=snum;i++))
+	do
+		echo -n "请输入学号："
+		read sid
+		if [ ${sid:0:1} != s ] #检查学号是否符合命名规范，为了统一起见，这里规定学号以s开头
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [[ ${sid:1} == *[!0-9]* ]] #从第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [ ${#sid} -ne 8 ] #检查长度
+		then
+			echo "学号长度不符合要求,本次输入无效！"
+			continue
+		fi	
+		grep -w "$sid" ./student_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+		if [ $? -eq 0 ] #如果学号已存在
+		then
+			echo "学号已被创建，请重新输入！"
+			continue #跳过这次输入
+		fi
+		echo -n "请输入姓名："
+		read sname
+		echo -n "设置初始密码："
+		read spwd
+		echo -n "请输入课程名："
+		read cname
+		grep -w "$cname" ./course_record 1>/dev/null 2>&1 #检查课程是否存在
+		if [ $? -ne 0 ]
+		then
+			echo "该课程不存在，请检查您的输入！"
+			continue
+		fi
+		grep -w "$cname $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+		if [ $? -ne 0 ] #如果不匹配
+		then
+			echo "您未被分配该教学任务，请检查您的输入！"
+			continue #跳过这次输入
+		fi		
+		echo $sid $sname $spwd $tid $cname >> student_record #将学生信息写进文件
+		echo "创建成功！"
+	done	
+}
+
+alter_sid(){ #修改学生账户
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		return
+	fi	
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您需要修改的学生学号："
+	read sid
+	if [ ${sid:0:1} != s ] #检查学号是否符合命名规范，为了统一起见，这里规定学号以s开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${sid:1} == *[!0-9]* ]] #从第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#sid} -ne 8 ] #检查长度
+	then
+		echo "学号长度不符合要求,本次输入无效！"
+		return
+	fi	
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到，给出警告
+	then
+		echo "没有找到这个学号，请检查您的输入！"
+	else #如果找到了，先删除原来的信息，再输入新信息
+		echo -n "请输入新的学号："
+		read new_sid
+				if [ ${new_sid:0:1} != s ] #检查学号是否符合命名规范，为了统一起见，这里规定学号以s开头
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [[ ${new_sid:1} == *[!0-9]* ]] #从第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			return
+		fi
+		if [ ${#new_sid} -ne 8 ] #检查长度
+		then
+			echo "学号长度不符合要求,本次输入无效！"
+			return
+		fi	
+		grep -w "$new_sid" ./student_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出	
+		if [ $? -eq 0 -a $new_sid != $sid ] #如果命令退出状态是0，表示没有异常，说明这个用户已经存在
+		then
+			echo "该学号已存在，本次修改无效！"
+			return
+		fi
+		echo -n "请输入新的姓名："
+		read new_sname
+		echo -n "请设置新密码："
+		read new_spwd
+		echo -n "请输入课程名称："
+		read new_cname
+		grep -w "$new_cname" ./course_record 1>/dev/null 2>&1 #检查课程是否存在
+		if [ $? -ne 0 ]
+		then
+			echo "该课程不存在，本次修改无效！"
+			return
+		fi
+		grep -w "$new_cname $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+		if [ $? -ne 0 ]
+		then
+			echo "您未被分配该教学任务，请检查您的输入！"
+			continue
+		fi		
+		grep -wv "$sid" ./student_record > student_record_tmp #全字查找并反转输出到新文件
+		rm ./student_record #删除原来的记录
+		mv student_record_tmp student_record #更改新文件的名字	
+		echo $new_sid $new_sname $new_spwd $tid $new_cname >> student_record #将新信息写进文件
+		echo "修改成功！"
+	fi	
+}
+
+delete_sid(){ #删除学生账户
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		return
+	fi	
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，给出警告并返回
+	then
+		echo "该账号不存在，本次操作无效！"
+		return
+	fi
+	echo -n "请输入需要删除的学生学号："
+	read sid
+	if [ ${sid:0:1} != s ] #检查学号是否符合命名规范，为了统一起见，这里规定学号以s开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${sid:1} == *[!0-9]* ]] #从第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#sid} -ne 8 ] #检查长度
+	then
+		echo "学号长度不符合要求,本次输入无效！"
+		return
+	fi
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到，给出警告
+	then
+		echo "该学号不存在，请检查您的输入！"
+	else #如果找到
+		grep -w "$sid .* $tid" ./student_record 1>/dev/null 2>&1 #需要确认这个学生是否在该老师的教学班
+		if [ $? -ne 0 ] #如果不是这个班的学生，给出警告并返回
+		then
+			echo "不是本班学生，操作无效！"
+			return
+		fi		
+		grep -wv "$sid" ./student_record > student_record_tmp #全字查找并反转输出到新文件
+		grep -w "$sid" ./student_record > dustbin #为了安全，将删除的记录放到dustbin文件
+		rm ./student_record #删除原来的记录
+		mv student_record_tmp student_record #改回原名字
+		echo "删除成功，您可以在dustbin文件中找到被删的记录"
+		sleep 2
+		return
+	fi	
+}
+
+find_sid(){ #查看学生账户信息，因为不涉及修改、删除，所以不进行权限控制
+	clear
+	echo -n "请输入您要查找的学生学号："
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+	if [ $? -ne 0 ] #如果没有找到
+	then
+		echo "没有相关记录！"
+		return
+	fi
+	echo "学号  姓名  密码  教师工号  课程名"
+	grep -w "$sid" ./student_record
+}
+
+add_courseinfo(){ #发布课程信息
+	clear
+	echo "-------------------------------------------------"
+	echo "您可以使用本功能发布课程信息，请注意："
+	echo "1)课程信息是您想告知学生的关于您所教授的课程的信息"
+	echo "如：课程通知、参考资料、课堂纪律等;"
+	echo "2)您可以在教师用户界面选择10来布置作业，请不要把发布课程信息"
+	echo "和布置作业两个功能搞混了;"
+	echo "3)每条信息请不要超过50个字符。您可以无限制地发布多条。"
+	echo "-------------------------------------------------"	
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级-0菜单
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入需要发布信息的课程号："
+	read cid
+	grep -w "$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，发布作废
+	then
+		echo "该课程不存在，本次发布无效！"
+		return
+	fi
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "您未被分配该教学任务，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您要发布的信息(按回车结束输入)："
+	read info
+	if [ ${#info} -gt 50 ]
+	then
+		echo "内容过长，本次输入无效！"
+		return
+	fi	
+	echo "$cid课程相关信息：" $info >> info_record
+	echo "发布成功！"
+}
+
+alter_courseinfo(){ #修改已发布的课程信息
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi	
+	echo -n "请输入需要修改发布信息的课程号："
+	read cid
+	grep -w "$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，发布作废
+	then
+		echo "该课程不存在，本次发布无效！"
+		return
+	fi
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "您未被分配该教学任务，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入新的信息(按回车结束输入)："
+	read new_info
+	if [ ${#new_info} -gt 50 ]
+	then
+		echo "内容过长，本次输入无效！"
+		return
+	fi		
+	grep -wv "$cid" ./info_record > info_record_tmp #全字查找并反转输出到新文件
+	grep -w "$cid" ./info_record > dustbin #为了安全，将删除的记录放到dustbin文件
+	rm ./info_record #删除原来的记录
+	mv info_record_tmp info_record #改回原名字
+	echo "$cid课程相关信息更正：" $new_info >> info_record #将新信息写进文件
+	echo "修改成功！"
+}
+
+delete_courseinfo(){ #删除已发布的课程信息
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi	
+	echo -n "请输入需要删除的课程号："
+	read cid
+	grep -w "$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，发布作废
+	then
+		echo "该课程不存在，本次发布无效！"
+		return
+	fi
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "您未被分配该教学任务，请检查您的输入！"
+		return
+	fi
+	grep -v "^$cid" ./info_record > info_record_tmp #全字查找并反转输出到新文件
+	grep "^$cid" ./info_record > dustbin #为了安全，将删除的记录放到dustbin文件
+	rm ./info_record #删除原来的记录
+	mv info_record_tmp info_record #改回原名字
+	echo "删除成功，您可以在dustbin文件中找到被删的记录"	
+}
+
+show_courseinfo(){ #显示已发布的课程信息，因为每个教学班不同，要进行权限控制
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入课程号："
+	read cid
+	grep -w "$cid" ./course_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到
+	then
+		echo "没有找到该课程号，本次操作无效！"
+		return	
+	fi
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "没有权限查看，您尚未被分配该教学任务！"
+		return
+	fi
+	grep "^$cid" ./info_record 1>/dev/null 2>&1 #检查是否有相关信息
+	if [ $? -ne 0 ]
+	then
+		echo "您没有发布关于这门课的信息！"
+		return
+	fi
+	echo "您已经发布的信息如下："
+	grep "^$cid" ./info_record
+}
+
+assign_job(){ #发布作业，作业信息由作业号、课程号、教师工号、作业内容等组成
+	clear
+	echo "-------------------------------------------------"
+	echo "您可以使用本功能发布作业，请注意："
+	echo "1)作业号命名规范为job+数字,如job1"
+	echo "2)作业内容请尽可能精简（20字以内），超出请新建"
+	echo "3)作业号请不要超过8位"
+	echo "-------------------------------------------------"
+	touch ./job_record #创建文件job_record记录作业信息
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级菜单
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入需要布置作业的课程号："
+	read cid
+	grep "^$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，发布作废
+	then
+		echo "该课程不存在，本次发布无效！"
+		return
+	fi
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "您未被分配该教学任务，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您需要布置的作业数："
+	read jnum
+	for((i=1;i<=jnum;i++))
+	do
+		echo -n "请输入作业编号:"
+		read jid
+		if [ ${jid:0:3} != job ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [[ ${jid:3} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+		then
+			echo "不符合命名规范，本次输入无效！"
+			continue
+		fi
+		if [ ${#jid} -eq 3 ] #如果只输入了job
+		then
+			echo "您只输入了job，没有编号！"
+			continue
+		fi
+		if [ ${#jid} -gt 8 ] #作业号过长
+		then
+			echo "作业号过长,本次输入无效！"
+			continue
+		fi	
+		grep "^$jid" ./job_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+		if [ $? -eq 0 ] #如果作业已经被布置
+		then
+			echo "作业号已存在，请检查是否重复布置，或者换一个作业号！"
+			continue #跳过这次输入
+		fi
+		echo -n "作业内容："
+		read content
+		if [ ${#content} -gt 20 ]
+		then
+			echo "作业内容过长，本次输入无效！"
+			continue
+		fi
+		echo $jid $cid $tid $content "NO" >> ./job_record #相关信息写进job_record
+		echo "发布成功！"
+	done
+}
+
+alter_job(){ #修改布置的作业信息
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级菜单
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入需要修改的作业号："
+	read jid
+	grep "^$jid" ./job_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，发布作废
+	then
+		echo "作业号不存在，本次修改无效！"
+		return
+	fi
+	grep -w "$jid .* $tid" ./job_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "您未被分配该教学任务，请检查您的输入！"
+		return
+	fi	
+	echo -n "请输入新的作业号："
+	read new_jid
+	if [ ${new_jid:0:3} != job ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${new_jid:3} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#new_jid} -eq 3 ] #如果只输入了job
+	then
+		echo "您只输入了job，没有编号！"
+		return
+	fi
+	if [ ${#new_jid} -gt 8 ] #作业号过长
+	then
+		echo "作业号过长,本次输入无效！"
+		return
+	fi		
+	grep "^$new_jid" ./job_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -eq 0 -a $new_jid != $jid ] #如果找到，发布作废
+	then
+		echo "作业号已存在，本次修改无效！"
+		return
+	fi
+	echo -n "请输入课程号："
+	read new_cid
+	grep "^$new_cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，发布作废
+	then
+		echo "该课程不存在，修改无效！"
+		return
+	fi
+	grep -w "$new_cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "您未被分配该教学任务，修改无效！"
+		return
+	fi
+	echo -n "请输入新的内容(20字以内)："
+	read new_content
+	if [ ${#new_content} -gt 20 ] #检查输入的长度
+	then
+		echo "作业内容过长，本次输入无效！"
+		return
+	fi
+	grep -v "^$jid" ./job_record > job_record_tmp #全字查找并反转输出到新文件
+	grep "^$jid" ./job_record > dustbin #为了安全，将删除的记录放到dustbin文件
+	rm ./job_record #删除原来的记录
+	mv job_record_tmp job_record #改回原名字
+	echo $new_jid $new_cid $tid $new_content "NO" >> ./job_record #将新信息写进文件，作业完成情况默认是NO
+	echo "修改成功！"	
+}
+
+delete_job(){ #删除发布的作业
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级菜单
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入需要删除的作业号："
+	read jid
+	grep "^$jid" ./job_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有，删除无效
+	then
+		echo "该课程不存在，删除无效！"
+		return
+	fi
+	grep -w "$jid .* $tid" ./job_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "您不是任课老师，没有权限删除！"
+		return
+	fi
+	grep -v "^$jid" ./job_record > job_record_tmp #全字查找并反转输出到新文件
+	grep "^$jid" ./job_record > dustbin #为了安全，将删除的记录放到dustbin文件
+	rm ./job_record #删除原来的记录
+	mv job_record_tmp job_record #改回原名字	
+	echo "删除成功，您可以在dustbin文件中找到被删的记录"
+}
+
+show_job(){ #查看已布置的作业，不是负责本教学班的老师需要控制权限
+	clear
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级菜单
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	grep -w "$tid" ./job_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级菜单
+	then
+		echo "您还没有布置过作业！"
+		return
+	fi	
+	echo "您布置过的作业是："
+	echo "作业号 课程号 我的工号 作业内容 完成情况(默认)"		
+	grep -w "$tid" ./job_record
+}
+
+check_job(){ #查看学生作业完成情况
+	clear
+	touch ./stu_job_record #建立stu_job_record记录学生作业情况，该文件在老师和学生之间共享
+	echo -n "请先输入您的工号以便匹配信息："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级菜单
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入需要检查的学生学号："
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这个学生，查找无效
+	then
+		echo "没有相关学生信息！"
+		return
+	fi
+	grep -w "$sid .* $tid" ./student_record 1>/dev/null 2>&1 #检查学生是否在自己的教学班
+	if [ $? -ne 0 ]
+	then
+		echo "不是本班学生，无查看权限！"
+		return
+	fi
+	grep -w "^$sid" ./stu_job_record 1>/dev/null 2>&1 #在stu_job_record中查找学生以检查学生完成情况
+	if [ $? -ne 0 ]
+	then
+		echo "该学生尚未提交作业信息！"
+		return
+	else
+		echo "学号 姓名 课程号 作业号 完成情况 作业名称"
+		grep "^$sid" ./stu_job_record
+	fi
+	echo "您可输入作业名称打开学生提交的作业(如果要退出请按q再回车)："
+	read line
+	if [ $line = q -o $line = Q ]
+	then
+		echo "祝您教学愉快，再见！"
+		sleep 1
+		return
+	else
+		ls ${line} 2>/dev/null 1>&2 #查找这个文件
+		if [ $? -ne 0 ]
+		then
+			echo "该作业不存在！"
+			return
+		fi
+		echo "作业内容是："
+		cat ${line} #将line当作文件名处理，输出line的内容
+	fi
+}
+
+change_tpwd(){ #教师用户修改密码
+	clear
+	echo "您已进入密码修改界面"
+	echo -n "请输入您的新密码(长度不少于6位)："
+	read new_tpwd0
+	len=`expr length $new_tpwd0` #求当前输入的长度
+	if [ $len -lt 6 ] #如果长度小于6则给出警告
+	then
+		echo "密码长度不够,请按要求输入！"
+		return
+	fi
+	echo -n "请再次输入以确认："
+	read new_tpwd1
+	if [ $new_tpwd0 -ne $new_tpwd1 ] #确认两次输入是否匹配
+	then
+		echo "两次输入不匹配！"
+		return
+	else
+		echo $new_tpwd0 > ./tpwd_record #新密码写进文件
+		echo "密码修改成功！"
+	fi	
+}
+
+back(){ #返回上级菜单
+	clear
+	exit	
+}
+
+echo "提示：初始密码是123456，登陆后请及时修改！"
+echo -n "请输入教师用户密码："
+read line
+secret=`head -n 1 ./tpwd_record` #读取第一行，这就保证了读到的是更新后的密码
+if [ $line -eq $secret ]
+then
+	teacher_menu #如果密码正确，进入教师菜单
+else
+	clear
+	echo "密码错误！"
+	sleep 2
+fi

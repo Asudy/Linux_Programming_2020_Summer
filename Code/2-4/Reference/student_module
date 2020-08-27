@@ -1,0 +1,446 @@
+#!/bin/bash
+#以下是学生模块（student_module）
+s_pwd=123456 #学生初始密码
+touch spwd_record #建立文件保存密码信息
+echo $s_pwd >> spwd_record #每次运行初始密码都会被追加到文件，但验证的时候只取第一行
+chmod 700 spwd_record #对文件进行权限控制
+
+student_menu(){ #学生菜单
+	clear
+	while true
+	do
+		echo "================================================="
+		echo "同学您好，请选择以下功能："
+		echo "1-搜索您的课程"
+		echo "2-查看老师布置的作业"
+		echo "3-新建作业"
+		echo "4-修改作业"
+		echo "5-删除作业"
+		echo "6-查看已提交的作业"
+		echo "7-查询作业提交信息"
+		echo "8-修改密码"
+		echo "0-返回上级菜单"
+		echo "================================================="
+		read student_choice
+		case $student_choice in #以下函数名与上面的功能一一对应
+		1)find_course;;
+		2)show_job;;
+		3)create_doc;;
+		4)alter_doc;;
+		5)delete_doc;;
+		6)show_doc;;
+		7)check_jobinfo;;
+		8)change_spwd;;
+		0)back;;
+		*)
+			echo "无效的输入，请检查您的输入！"
+			sleep 2
+			clear;;
+		esac
+	done	
+}
+
+find_course(){ #搜索自己需要上的课程信息
+	clear
+	echo -n "请输入您的学号："
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到
+	then
+		echo "没有这个学号，请检查您的输入！"
+		return
+	fi
+	echo "您的课程信息是："
+	echo "学号 姓名 初始密码 指导老师工号 课程名"
+	grep "^$sid" ./student_record
+	echo -n "如果要查询课程号，请在此输入课程名程(q+回车退出)："
+	read line
+	if [ $line = q -o $line = Q ]
+	then
+		echo "祝您学习进步，再见！"
+		sleep 1
+		return		
+	else
+		grep -w "$line" ./course_record 1>/dev/null 2>&1 #在course_record种查找课程
+		if [ $? -ne 0 ] #如果没有找到
+		then
+			echo "没有找到相关信息，请检查您的输入！"
+			return
+		else
+			echo "查找到的记录如下："
+			echo "课程号 课程名 指导老师工号"
+			grep -w "$line" ./course_record
+		fi
+	fi	
+}
+
+show_job(){ #查看老师布置的作业
+	clear
+	echo -n "请输入您的学号："
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到，返回上级菜单
+	then
+		echo "没有这个学号，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您的老师工号："
+	read tid
+	grep -w "$tid" ./teacher_record 1>/dev/null 2>&1 #在教师记录中查找工号
+	if [ $? -ne 0 ] #如果工号不存在，返回上级菜单
+	then
+		echo "该账号不存在，请检查您的输入！"
+		return
+	fi
+	grep -w "$sid .* $tid" ./student_record 1>/dev/null 2>&1 #检查这个学生在不在该老师的教学班
+	if [ $? -ne 0 ] #如果不在就退出
+	then 
+		echo "无权限查看，您不是这个老师的学生！"
+		return
+	fi
+	grep -w "$tid" ./job_record 1>/dev/null 2>&1 #在作业记录中匹配老师工号
+	if [ $? -ne 0 ] #如果没有找到，返回上级菜单
+	then
+		echo "该老师没有布置过作业！"
+		return
+	fi
+	echo "这个老师布置的作业信息是："
+	echo "作业号 课程号 教师工号 作业内容 完成状态(默认)"
+	grep -w "$tid" ./job_record
+}
+
+create_doc(){ #新建作业
+	clear
+	echo "-------------------------------------------------"
+	echo "您可以使用本功能完成作业，请注意："
+	echo "1)作业号命名规范为job+数字,如job1"
+	echo "2)请不要在提交的作业名中使用特殊字符或空格，否则您的提交将会无效"
+	echo "-------------------------------------------------"
+	touch ./stu_job_record
+	echo -n "请输入您的学号:"
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到,返回上级菜单
+	then
+		echo "没有这个学号，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您的名字："
+	read sname
+	grep -w "$sid $sname" ./student_record 1>/dev/null 2>&1 #检查学号和姓名是否匹配
+	if [ $? -ne 0 ]
+	then
+		echo "输入无效，学号和姓名不匹配！"
+		return
+	fi
+	echo -n "输入作业号："
+	read jid
+	grep -w "$jid" ./job_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+	if [ $? -ne 0 ] #如果作业不存在
+	then
+		echo "输入无效，作业号不存在！"
+		return #退出
+	fi
+	echo -n "输入课程号："
+	read cid
+	grep "^$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，退出
+	then
+		echo "输入无效，该课程不存在！"
+		return
+	fi
+	echo -n "输入您的老师工号："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		return
+	fi
+	grep -w "$sid .* $tid" ./student_record 1>/dev/null 2>&1 #检查这个学生在不在该老师的教学班
+	if [ $? -ne 0 ] #如果不在就退出
+	then 
+		echo "无操作权限，您不是这个老师的学生！"
+		return
+	fi	
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "输入无效，该老师不负责本课程！"
+		return
+	fi
+	echo -n "输入您要提交的作业文件名(请不要使用特殊字符或空格！)："
+	read docname
+	echo "输入作业内容："
+	read doc_content
+	len=`expr length $doc_content` #求当前输入的长度
+	if [ $len -eq 0 ] #如果没有内容
+	then
+		echo "您没有输入任何信息！本次提交无效！"
+		return
+	fi
+	echo $doc_content > ${docname} #提交内容写进文件
+	echo $sid $sname $cid $jid "YES" $docname >> stu_job_record #学生信息写进保存作业提交信息的文件
+}
+
+alter_doc(){ #修改作业
+	clear
+	touch ./stu_job_record
+	echo -n "请输入您的学号:"
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到,返回上级菜单
+	then
+		echo "没有这个学号，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您的名字："
+	read sname
+	grep -w "$sid $sname" ./student_record 1>/dev/null 2>&1 #检查学号和姓名是否匹配
+	if [ $? -ne 0 ]
+	then
+		echo "输入无效，学号和姓名不匹配！"
+		return
+	fi
+	echo -n "输入您要修改提交的作业号："
+	read jid
+	grep -w "$jid" ./stu_job_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+	if [ $? -ne 0 ] #如果不存在
+	then
+		echo "输入无效，该作业号未出现在您的提交记录里！"
+		return #退出
+	fi
+	echo -n "输入课程号："
+	read cid
+	grep -w "$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，退出
+	then
+		echo "输入无效，该课程不存在！"
+		return
+	fi
+	grep -w "$jid $cid" ./job_record 1>/dev/null 2>&1 #匹配作业号和课程号
+	if [ $? -ne 0 ] #如果匹配失败则退出
+	then
+		echo "输入无效，作业号与课程号不匹配！"
+		return
+	fi
+	echo -n "输入您的老师工号："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		return
+	fi
+	grep -w "$sid .* $tid" ./student_record 1>/dev/null 2>&1 #检查这个学生在不在该老师的教学班
+	if [ $? -ne 0 ] #如果不在就退出
+	then 
+		echo "无操作权限，您不是这个老师的学生！"
+		return
+	fi
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "输入无效，该老师不负责本课程！"
+		return
+	fi	
+	grep -wv "$sname .* $jid" ./stu_job_record > stu_job_record_tmp #全字查找并反转输出到新文件
+	grep -w "$sname .* $jid" ./stu_job_record > dustbin #为了安全，将删除的记录放到dustbin文件
+	rm ./stu_job_record #删除原来的记录
+	mv stu_job_record_tmp stu_job_record #改回原名字
+	echo -n "输入您要重新提交的作业文件名(请不要使用特殊字符!)："
+	read new_docname
+	echo "输入作业内容："
+	read new_doc_content
+	echo $new_doc_content > ${new_docname} #提交内容写进文件
+	echo $sid $sname $cid $jid "YES" $new_docname >> stu_job_record #学生信息写进保存作业提交信息的文件
+	echo "修改成功！"
+}
+
+delete_doc(){ #删除作业
+	clear
+	touch ./stu_job_record
+	echo -n "请输入您的学号:"
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到,返回上级菜单
+	then
+		echo "没有这个学号，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您的名字："
+	read sname
+	grep -w "$sid $sname" ./student_record 1>/dev/null 2>&1 #检查学号和姓名是否匹配
+	if [ $? -ne 0 ]
+	then
+		echo "输入无效，学号和姓名不匹配！"
+		return
+	fi
+	echo -n "输入您要删除提交的作业号："
+	read jid
+	grep -w "$jid" ./stu_job_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+	if [ $? -ne 0 ] #如果不存在
+	then
+		echo "输入无效，该作业号不在您的提交列表里！"
+		return #退出
+	fi
+	echo -n "输入课程号："
+	read cid
+	grep "^$cid" ./course_record 1>/dev/null 2>&1 #查找匹配的课程号
+	if [ $? -ne 0 ] #如果没有这门课，退出
+	then
+		echo "输入无效，该课程不存在！"
+		return
+	fi
+	echo -n "输入您的老师工号："
+	read tid
+	if [ ${tid:0:1} != t ] #检查工号是否符合命名规范，为了统一起见，这里规定工号以t开头
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [[ ${tid:1} == *[!0-9]* ]] #从工号第二位开始检查后面是不是数字
+	then
+		echo "不符合命名规范，本次输入无效！"
+		return
+	fi
+	if [ ${#tid} -ne 6 ] #检查工号长度满足要求
+	then
+		echo "工号长度不符合要求,本次输入无效！"
+		return
+	fi
+	grep -w "$sid .* $tid" ./student_record 1>/dev/null 2>&1 #检查这个学生在不在该老师的教学班
+	if [ $? -ne 0 ] #如果不在就退出
+	then 
+		echo "无操作权限，您不是这个老师的学生！"
+		return
+	fi	
+	grep -w "$cid .* $tid" ./course_record 1>/dev/null 2>&1 #检查这个老师是不是教这门课
+	if [ $? -ne 0 ]
+	then
+		echo "输入无效，该老师不负责本课程！"
+		return
+	fi
+	grep -wv "$sname .* $jid" ./stu_job_record > stu_job_record_tmp #全字查找并反转输出到新文件
+	grep -w "$sname .* $jid" ./stu_job_record > dustbin #为了安全，将删除的记录放到dustbin文件
+	rm ./stu_job_record #删除原来的记录
+	mv stu_job_record_tmp stu_job_record #改回原名字
+	echo "删除成功！"
+}
+
+show_doc(){ #查看已提交的作业
+	clear
+	echo -n "请输入您的学号:"
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到,返回上级菜单
+	then
+		echo "没有这个学号，请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您要查看的作业号："
+	read jid
+	grep -w "$jid" ./job_record 1>/dev/null 2>&1 #查找匹配的行，将错误信息重定向到标准输出
+	if [ $? -ne 0 ] #如果作业不存在
+	then
+		echo "输入无效，作业号不存在！"
+		return #退出
+	fi
+	grep -w "$sid .* $jid" ./stu_job_record 1>/dev/null 2>&1 #判断学号和作业号是否匹配
+	if [ $? -ne 0 ]
+	then
+		echo "您没有这个作业！请检查您的输入！"
+		return
+	fi
+	echo -n "请输入您的作业文件名："
+	read docname
+	ls ${docname} 2>/dev/null 1>&2 #查找这个文件
+	if [ $? -ne 0 ]
+	then
+		echo "该作业不存在！"
+		return
+	fi
+	echo "您提交的作业内容是："
+	cat ${docname} #将line当作文件名处理，输出line的内容	
+}
+
+check_jobinfo(){ #查询作业提交信息
+	clear
+	echo -n "请输入您的学号："
+	read sid
+	grep -w "$sid" ./student_record 1>/dev/null 2>&1 #首先查找这个id
+	if [ $? -ne 0 ] #如果没有找到
+	then
+		echo "没有这个学号，请检查您的输入！"
+		return
+	fi
+	grep -w "$sid" ./stu_job_record 1>/dev/null 2>&1 #再提交记录里查找这个id
+	if [ $? -ne 0 ] #如果没有找到
+	then
+		echo "没有关于这个学号的作业提交信息！"
+		return
+	fi
+	echo "您的作业提交信息是："
+	echo "学号 姓名 课程号 作业号 是否提交 提交文件名称"
+	grep "^$sid" ./stu_job_record
+}
+
+change_spwd(){ #学生用户修改密码
+	clear
+	echo "您已进入密码修改界面"
+	echo -n "请输入您的新密码(长度不少于6位)："
+	read new_spwd0
+	len=`expr length $new_spwd0` #求当前输入的长度
+	if [ $len -lt 6 ] #如果长度小于6则给出警告
+	then
+		echo "密码长度不够,请按要求输入！"
+		return
+	fi
+	echo -n "请再次输入以确认："
+	read new_spwd1
+	if [ $new_spwd0 -ne $new_spwd1 ] #确认两次输入是否匹配
+	then
+		echo "两次输入不匹配！"
+		return
+	else
+		echo $new_spwd0 > ./spwd_record #新密码写进文件
+		echo "密码修改成功！"
+	fi	
+}
+
+back(){ #返回上级菜单
+	clear
+	exit	
+}
+
+echo "提示：初始密码是123456，登陆后请及时修改！"
+echo -n "请输入学生用户密码："
+read line
+secret=`head -n 1 ./spwd_record` #读取第一行，这就保证了读到的是更新后的密码
+echo $secret
+if [ $line -eq $secret ]
+then
+	student_menu #如果密码正确，进入教师菜单
+else
+	clear
+	echo "密码错误！"
+	sleep 2
+fi
