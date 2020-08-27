@@ -4,14 +4,17 @@
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
 
+# 显示管理员主菜单
+# 管理员支持的功能在菜单中列出，其下方函数与菜单所列顺序一致
 show_admin_menu() {
+    echo "欢迎您！管理员 $1"
     echo "==================== 管理员菜单 ===================="
     echo "教师账号相关操作："
-    echo "    1) 创建教师账号"
-    echo "    2) 修改教师账号"
-    echo "    3) 删除教师账号"
-    echo "    4) 显示教师账号"
-    echo "    5) 查找教师"
+    echo "    1)  创建教师账号"
+    echo "    2)  修改教师账号"
+    echo "    3)  删除教师账号"
+    echo "    4)  显示教师账号"
+    echo "    5)  查找教师"
     echo "课程相关操作："
     echo "    6)  创建课程"
     echo "    7)  修改课程"
@@ -21,7 +24,7 @@ show_admin_menu() {
     echo "账号管理："
     echo "    11) 修改密码"
     echo
-    echo "    0) 返回上级菜单"
+    echo "    0)  返回上级菜单"
     echo "===================================================="
 }
 
@@ -49,7 +52,7 @@ modify_teacher_account() {
         return 1
     fi
     
-    oldName=`echo $tinfo | cut -d: -f2`
+    oldName=`echo $tinfo | cut -d: -f2` # 从文件中获取该教师的旧名字和旧密码
     oldPass=`echo $tinfo | cut -d: -f3`
     read -p "更改教师姓名（留空则保持不变）：$oldName -> " tname
     read -p "更改教师密码（留空则保持不变）：$oldPass -> " tpass
@@ -70,7 +73,7 @@ delete_teacher_account() {
         echo "工号 $tid 教师不存在，删除失败！"
         return 1
     fi
-    sed -i "/^t$tid:/d" $userInfoFile    # 存在则删除
+    sed -i "/^t$tid:/d" $userInfoFile    # 存在则删除记录
     echo "工号 $tid 教师删除成功！"
     return 0
 }
@@ -113,7 +116,7 @@ create_course() {
     fi
     read -p "请输入课程名：" cname
     read -p "请设置该课程任课教师工号：t" tid
-    grep -qs "^t$tid:" $userInfoFile
+    grep -qs "^t$tid:" $userInfoFile    # 检查输入的教师工号是否存在
     [ $? -ne 0 ] && echo "该工号教师不存在，创建失败！" && return 1
     echo "c$cid:${cname}:t${tid:-t000000}" >> $courseInfoFile # 账号、姓名、密码写入文件
     echo "课程 [c$cid]$cname 添加成功，任课教师工号 t$tid"
@@ -130,8 +133,8 @@ modify_course() {
         return 1
     fi
     
-    oldName=`echo $cinfo | cut -d: -f2`
-    oldTID=`echo $cinfo | cut -d: -f3`; oldTID=${oldTID:1}
+    oldName=`echo $cinfo | cut -d: -f2`                     # 从文件中获取课程的旧名称
+    oldTID=`echo $cinfo | cut -d: -f3`; oldTID=${oldTID:1}  # 获取负责教师工号（去除前缀't'）
     read -p "更改课程名（留空则保持不变）：$oldName -> " cname
     read -p "更改任课教师工号（留空则保持不变）：t$oldTID -> t" tid
     if [ "$cname" -o "$tid" ] ; then  # 若有任一更改，更新文件
@@ -180,33 +183,34 @@ search_course() {
 # 修改管理员密码
 change_admin_pwd() {
     read -p "原密码：" oldPass
-    . $checkPwdFile "admin" "$oldPass"
+    . $checkPwdFile "admin" "$oldPass"  # 验证原密码
     [ $? -ne 0 ] && echo "原密码错误，修改失败！" && return 1
     read -p "新密码：" newPass
     read -p "确认新密码：" newPass2
     [ "$newPass" != "$newPass2" ] && echo "两次新密码输入不一致，修改失败！" && return 1
-    sed -i "/^admin:/s/$oldPass$/$newPass/" $userInfoFile
+    sed -i "/^admin:/s/$oldPass$/$newPass/" $userInfoFile   # 在文件中修改密码
     echo "管理员密码修改成功！当前密码：$newPass"
     return 0
 }
 
-[ "$DEBUG" ] || clear ; show_admin_menu
+# 管理员界面主循环
+[ "$DEBUG" ] || clear ; show_admin_menu "Administrator"
 while true ; do
     read -p "选择操作：" opCode
-    [ "$DEBUG" ] || clear ; show_admin_menu
+    [ "$DEBUG" ] || clear ; show_admin_menu "Administrator"
 
     case $opCode in
         0) exit 0;;   # 返回上级
-        1) create_teacher_account;;
-        2) modify_teacher_account;;
-        3) delete_teacher_account;;
-        4) list_teachers; echo;;
-        5) search_teacher; echo;;
-        6) create_course;;
-        7) modify_course;;
-        8) delete_course;;
-        9) list_courses; echo;;
-        10) search_course; echo;;
+        1) create_teacher_account;;     # 创建教师账户
+        2) modify_teacher_account;;     # 修改教师账户
+        3) delete_teacher_account;;     # 删除教师账户
+        4) list_teachers; echo;;        # 列出教师账户
+        5) search_teacher; echo;;       # 查找教师
+        6) create_course;;              # 创建课程
+        7) modify_course;;              # 修改课程
+        8) delete_course;;              # 删除课程
+        9) list_courses; echo;;         # 列出课程
+        10) search_course; echo;;       # 查询课程
         11) change_admin_pwd;;
         *)          # 其它输入，报错
             echo "选择无效！请重新输入。"
