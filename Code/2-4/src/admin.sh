@@ -211,7 +211,7 @@ while true ; do
         8) delete_course;;              # 删除课程
         9) list_courses; echo;;         # 列出课程
         10) search_course; echo;;       # 查询课程
-        11) change_admin_pwd;;
+        11) change_admin_pwd;;          # 修改管理员密码
         *)          # 其它输入，报错
             echo "选择无效！请重新输入。"
             echo "Selection not accepted! Please re-enter."

@@ -4,7 +4,9 @@
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
 
+# 显示教师用户主菜单
 show_teacher_menu() {
+    echo "欢迎您！教师 $1"
     echo "==================== 教师菜单 ===================="
     echo "学生账户相关操作："
     echo "    1)  创建学生账户"
@@ -60,12 +62,12 @@ modify_student_account() {
         return 1
     fi
     
-    oldContent=`echo $sinfo | cut -d: -f2`
-    oldPass=`echo $sinfo | cut -d: -f3`
-    read -p "更改学生姓名（留空则保持不变）：$oldContent -> " sname
+    oldName=`echo $sinfo | cut -d: -f2`
+    oldPass=`echo $sinfo | cut -d: -f3`     # 获得学生账户的旧名字和旧密码
+    read -p "更改学生姓名（留空则保持不变）：$oldName -> " sname
     read -p "更改学生密码（留空则保持不变）：$oldPass -> " spass
     if [ "$sname" -o "$spass" ] ; then  # 若有任一更改，更新文件
-        sed -i "/^s$sid:/c\s$sid:${sname:=$oldContent}:${spass:=$oldPass}" $userInfoFile
+        sed -i "/^s$sid:/c\s$sid:${sname:=$oldName}:${spass:=$oldPass}" $userInfoFile
         echo "学号 $sid 学生账户信息修改成功！当前姓名：$sname；当前密码：$spass"
     else
         echo "学号 $sid 学生账户信息未进行任何修改"
@@ -117,7 +119,7 @@ search_student() {
 search_course() {
     [ ! -e $courseInfoFile ] && echo "还未创建任何课程，请联系管理员创建课程！" && return 1    # 检查文件是否存在
     read -p "请输入课程查找关键字：" cname
-    grep -qs "^c.*$cname" $courseInfoFile
+    grep -qs "^c.*$cname" $courseInfoFile   # 查找课程号/课程内容/任课教师工号中含有关键字的行
     [ $? -ne 0 ] && echo "没有任何符合条件的课程" && return 1
     (echo "课程号:课程名称:任课教师工号" ; grep "^c.*$cname" $courseInfoFile) | column -ts:
 
@@ -129,12 +131,12 @@ create_course_info() {
     [ ! -e $courseInfoFile ] && echo "课程信息文件不存在，请联系管理员创建课程！" && return 1    # 检查文件是否存在
     read -p "请输入课程信息编号：m" mid     # 为方便区分，课程信息编号前缀'm'
     grep "^m$mid:" $courseInfoFile 1>/dev/null 2>&1
-    if [ $? -eq 0 ] ; then              # 编号为主键，重复则报错
+    if [ $? -eq 0 ] ; then                  # 编号为主键，重复则报错
         echo "该编号课程信息已存在，创建失败！"
         return 1
     fi
     read -p "请设置该课程信息所属课程：c" cid
-    grep -qs "^c$cid:" $courseInfoFile
+    grep -qs "^c$cid:" $courseInfoFile      # 检查输入的课程是否存在
     if [ $? -ne 0 ] ; then
         echo "该课程不存在，课程信息创建失败！"
         return 1
@@ -159,7 +161,7 @@ modify_course_info() {
     fi
     
     oldContent=`echo $minfo | cut -d: -f2`
-    oldCID=`echo $minfo | cut -d: -f3`; oldCID=${oldCID:1}
+    oldCID=`echo $minfo | cut -d: -f3`; oldCID=${oldCID:1}      # 获得课程信息的旧内容和旧课程号
     read -p "更改所属课程（留空则保持不变）：c$oldCID -> c" cid
     grep -qs "^c$cid:.*:$1$" $courseInfoFile
     [ $? -ne 0 ] && echo "您不是该课程的任课老师，修改失败！" && return 1
@@ -219,7 +221,7 @@ create_assignment() {
         return 1
     fi
     read -p "请设置该课程作业所属课程：c" cid
-    grep -qs "^c$cid:" $courseInfoFile
+    grep -qs "^c$cid:" $courseInfoFile  # 检查输入的课程是否存在
     if [ $? -ne 0 ] ; then
         echo "该课程不存在，课程作业创建失败！"
         return 1
@@ -259,7 +261,7 @@ modify_assignment() {
             sed -i "/^s.*:c$oldCID:a$aid:/d" $studentCourseFile
             grep "^s.*:c$cid::enrolled$" $studentCourseFile | cut -d: -f1 | xargs -I {} echo "{}:c$cid:a$aid:" >> $studentCourseFile
         fi
-        sed -i "/^a$aid:/c\a$aid:${aContent:=$oldContent}:c${cid:=$oldCID}" $courseInfoFile
+        sed -i "/^a$aid:/c\a$aid:${aContent:=$oldContent}:c${cid:=$oldCID}" $courseInfoFile # 修改关于作业信息的记录
         echo "编号 a$aid 课程作业作业修改成功！当前课程作业内容：$aContent；当前所属课程：c$cid"
     else
         echo "编号 a$aid 课程作业作业未进行任何修改"
@@ -299,7 +301,7 @@ list_assignments() {
 search_assignment() {
     [ ! -e $courseInfoFile ] && echo "课程作业文件不存在，请联系管理员创建课程！" && return 1    # 检查文件是否存在
     read -p "请输入作业查找关键字：" aContent
-    grep -qs "^a.*$aContent" $courseInfoFile
+    grep -qs "^a.*$aContent" $courseInfoFile    # 检查是否有符合条件的作业
     [ $? -ne 0 ] && echo "没有任何符合条件的课程作业" && return 1
     
     ( echo "编号:作业内容:所属课程号" ; grep "^a.*$aContent" $courseInfoFile ) | column -ts:
@@ -364,7 +366,7 @@ query_assignment_status() {
 # 修改教师账户密码
 change_teacher_pwd() {
     read -p "原密码：" oldPass
-    . $checkPwdFile "$1" "$oldPass" # $1为教师工号，登录后由该脚本调用者传入
+    . $checkPwdFile "$1" "$oldPass" # 验证密码，$1为教师工号，登录时由该脚本调用者传入
     [ $? -ne 0 ] && echo "原密码错误，修改失败！" && return 1
     read -p "新密码：" newPass
     read -p "确认新密码：" newPass2
@@ -374,34 +376,35 @@ change_teacher_pwd() {
     return 0
 }
 
+# 教师界面主循环
 [ "$DEBUG" ] || clear ; 
-grep "^$1:" $userInfoFile | cut -d: -f2 | xargs -I {} echo "欢迎您！教师 {}"
-show_teacher_menu
+userName=`grep "^$1:" $userInfoFile | cut -d: -f2`
+show_teacher_menu $userName
 while true ; do
     read -p "选择操作：" opCode
-    [ "$DEBUG" ] || clear ; show_teacher_menu
+    [ "$DEBUG" ] || clear ; show_teacher_menu $userName
 
     case $opCode in
         0) exit 0;;   # 返回上级
-        1) create_student_account;;
-        2) modify_student_account;;
-        3) delete_student_account;;
-        4) list_students; echo;;
-        5) search_student; echo;;
-        6) search_course;;
-        7) create_course_info $1;;
-        8) modify_course_info $1;;
-        9) delete_course_info $1;;
-        10) list_course_info; echo;;
-        11) search_course_info; echo;;
-        12) create_assignment $1;;
-        13) modify_assignment $1;;
-        14) delete_assignment $1;;
-        15) list_assignments; echo;;
-        16) search_assignment; echo;;
-        17) bind_student_course $1;;
-        18) query_assignment_status $1;;
-        19) change_teacher_pwd $1;;
+        1) create_student_account;;         # 创建学生账户
+        2) modify_student_account;;         # 修改学生账户
+        3) delete_student_account;;         # 删除学生账户
+        4) list_students; echo;;            # 显示学生账户
+        5) search_student; echo;;           # 查找学生
+        6) search_course;;                  # 查询课程
+        7) create_course_info $1;;          # 创建课程信息
+        8) modify_course_info $1;;          # 修改课程信息
+        9) delete_course_info $1;;          # 删除课程信息
+        10) list_course_info; echo;;        # 显示课程信息列表
+        11) search_course_info; echo;;      # 查询课程信息
+        12) create_assignment $1;;          # 创建作业
+        13) modify_assignment $1;;          # 修改作业
+        14) delete_assignment $1;;          # 删除作业
+        15) list_assignments; echo;;        # 显示作业列表
+        16) search_assignment; echo;;       # 查询作业
+        17) bind_student_course $1;;        # 变更参与课程学生
+        18) query_assignment_status $1;;    # 查询学生作业完成情况
+        19) change_teacher_pwd $1;;         # 修改教师账户密码
         *)          # 其它输入，报错
             echo "选择无效！请重新输入。"
             echo "Selection not accepted! Please re-enter."
