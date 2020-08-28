@@ -1,5 +1,5 @@
 #!/bin/bash
-# File:         admin.sh
+# File:         student.sh
 # Purpose:      Student module of the Homework Manager.
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
