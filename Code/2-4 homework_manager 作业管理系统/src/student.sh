@@ -11,11 +11,11 @@ show_student_menu() {
     echo "查询："
     echo "    1) 查询加入的课程"
     echo "    2) 查询课程信息（公告）"
-    echo "    3) 查询作业"
+    echo "    3) 查询个人作业"
     echo "编辑作业："
     echo "    4) 编辑课程作业"
     echo "账号管理："
-    echo "    5) 修改个人信息"
+    echo "    5) 修改个人信息（姓名）"
     echo "    6) 修改密码"
     echo
     echo "    0) 返回上级菜单"
