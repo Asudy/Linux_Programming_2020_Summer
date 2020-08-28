@@ -4,6 +4,8 @@
 # Author:       Asudy Wang | 王浚哲
 # Student ID:   3180103011
 
+userName=`grep "^$1:" $userInfoFile | cut -d: -f2`  # 得到登录学生的姓名，用于菜单显示
+
 # 显示学生主菜单
 show_student_menu() {
     echo "欢迎您！同学 $1"
@@ -129,6 +131,7 @@ change_student_info() {
     read -p "请输入您的新姓名（留空取消修改）：" sname
     if [ "$sname" -a "$sname" != "$oldName" ] ; then    # 新姓名与旧姓名不同才修改
         sed -i "/^$1:/s/:$oldName:/:$sname:/" $userInfoFile # 修改文件
+        userName="$sname"   # 修改显示在菜单上的名字
         [ $? -eq 0 ] && echo "学号 ${1:1} 同学姓名修改成功！当前姓名：$sname"
     else
         echo "您的姓名未进行任何修改"
@@ -151,11 +154,10 @@ change_student_pwd() {
 
 # 学生界面主循环
 [ "$DEBUG" ] || clear ; 
-userName=`grep "^$1:" $userInfoFile | cut -d: -f2`  # 得到登录学生的姓名，用于菜单显示
-show_student_menu $userName
+show_student_menu "$userName"
 while true ; do
     read -p "选择操作：" opCode
-    [ "$DEBUG" ] || clear ; show_student_menu $userName
+    [ "$DEBUG" ] || clear ; show_student_menu "$userName"
 
     case $opCode in
         0) exit 0;;                         # 返回上级

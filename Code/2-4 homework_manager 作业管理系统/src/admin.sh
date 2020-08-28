@@ -90,14 +90,14 @@ list_teachers() {
 search_teacher() {
     read -p "请输入欲查找的教师工号或姓名（留空以查找空姓名的教师）：" tname
     if [ "$tname" ] ; then
-        grep -ie "^t.*$tname.*:" -ie ":.*$tname.*:" $userInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
+        grep -qs "^t.*$tname.*:" $userInfoFile  # 判断是否有记录，无记录则报错退出
     else
         grep -qs ":$tname:" $userInfoFile
     fi
     [ $? -ne 0 ] && echo "没有任何符合条件的教师" && return 1
     
     if [ "$tname" ] ; then
-        (echo "工号:姓名:密码" ; grep -e "^t.*$tname.*:" -ie ":.*$tname.*:" $userInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+        (echo "工号:姓名:密码" ; grep "^t.*$tname.*:" $userInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
     else
         (echo "工号:姓名:密码" ; grep ":$tname:" $userInfoFile) | column -ts:
     fi
@@ -165,7 +165,7 @@ list_courses() {
     [ ! -e $courseInfoFile ] && echo "还未创建任何课程，请先创建课程！" && return 1    # 检查文件是否存在
     grep "^c" $courseInfoFile 2>/dev/null 1>&2 # 判断是否有记录，无记录则报错退出
     [ $? -ne 0 ] && echo "当前没有任何注册的课程" && return 1
-    (echo "课程号:课程名:任课教师" ; grep "^c" $courseInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
+    (echo "课程号:课程名:任课教师工号" ; grep "^c" $courseInfoFile) | column -ts: # 有记录，加上表头对齐显示输出
     return 0
 }
 
