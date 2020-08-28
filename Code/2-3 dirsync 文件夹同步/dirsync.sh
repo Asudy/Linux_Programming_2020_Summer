@@ -60,7 +60,7 @@ case $mode in
     backup)     # 备份功能
         echo "Backing up $src -> $tgt..."
         [ ! -d "$tgt" ] && echo "Target directory '$tgt' does not exist. Creating target dir..." && mkdir -p "$tgt"   # 输入目标目录不存在，则创建新目录
-        # 将src目录递归地、保留属性地复制到tgt目录，且当源文件更新/目标目录没有此文件时才复制，由此实现备份功能
+        # 将src目录递归地(-r)、保留属性地(-p)复制到tgt目录(-T: treat DEST as a normal file)，且当源文件更新/目标目录没有此文件时才复制(-u)，由此实现备份功能
         cp -Trup "$src" "$tgt" && echo "Backup from $src to $tgt completed!" || (echo "$0: Backup failed"; exit 1)
         ;;
     sync)       # 同步功能
